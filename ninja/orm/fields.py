@@ -176,7 +176,7 @@ def get_schema_field(
             ]
             raise ConfigError("\n".join(msg)) from e
 
-        if field.primary_key or blank or null or optional:
+        if blank or null or optional:
             default = None
             nullable = True
 
