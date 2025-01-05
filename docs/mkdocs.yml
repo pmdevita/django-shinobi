@@ -105,6 +105,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          paths: [..]
           setup_commands:
             - from django.conf import settings
             - settings.configure()
