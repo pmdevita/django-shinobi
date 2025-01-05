@@ -1,6 +1,6 @@
 # Contributing
 
-Django Ninja uses Flit to build, package and publish the project.
+Django Shinobi uses Flit to build, package and publish the project.
 
 to install it use:
 
@@ -45,7 +45,7 @@ make test-cov
  
 ## Code style
 
-Django Ninja uses `ruff`, and `mypy` for style checks.
+Django Shinobi uses `ruff`, and `mypy` for style checks.
 
 Run `pre-commit install` to create a git hook to fix your styles before you commit.
 
@@ -79,7 +79,7 @@ make fmt
 ## Docs
 Please do not forget to document your contribution
 
-Django Ninja uses `mkdocs`:
+Django Shinobi uses `mkdocs`:
 
 ```
 cd docs/

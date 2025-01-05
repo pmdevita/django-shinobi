@@ -8,21 +8,23 @@
 
 
 <p align="center">
-  <a href="https://django-ninja.dev/"><img src="https://django-ninja.dev/img/logo-big.png"></a>
+  <a href="https://pmdevita.github.io/django-shinobi/"><img src="https://pmdevita.github.io/django-shinobi/img/logo-big.png"></a>
 </p>
 <p align="center">
     <em>Fast to learn, fast to code, fast to run</em>
 </p>
 
 
-![Test](https://github.com/vitalik/django-ninja/actions/workflows/test_full.yml/badge.svg)
-![Coverage](https://img.shields.io/codecov/c/github/vitalik/django-ninja)
-[![PyPI version](https://badge.fury.io/py/django-ninja.svg)](https://badge.fury.io/py/django-ninja)
-[![Downloads](https://static.pepy.tech/personalized-badge/django-ninja?period=month&units=international_system&left_color=black&right_color=brightgreen&left_text=downloads/month)](https://pepy.tech/project/django-ninja)
+![Test](https://github.com/pmdevita/django-shinobi/actions/workflows/test_full.yml/badge.svg)
+![Coverage](https://img.shields.io/codecov/c/github/pmdevita/django-shinobi)
+[![PyPI version](https://badge.fury.io/py/django-shinobi.svg)](https://badge.fury.io/py/django-shinobi)
+[![Downloads](https://static.pepy.tech/personalized-badge/django-shinobi?period=month&units=international_system&left_color=black&right_color=brightgreen&left_text=downloads/month)](https://pepy.tech/project/django-shinobi)
 
-# Django Ninja - Fast Django REST Framework
+# Django Shinobi - Fast Django REST Framework
 
-**Django Ninja** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**.
+**Django Shinobi** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**. It's a fork 
+of the fantastic **[Django Ninja](https://github.com/vitalik/django-ninja)** library focused on community-desired 
+features and fixes.
 
 
  **Key features:**
@@ -32,20 +34,20 @@
   - **Fast to code**: Type hints and automatic docs lets you focus only on business logic.
   - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
   - **Django friendly**: (obviously) has good integration with the Django core and ORM.
-  - **Production ready**: Used by multiple companies on live projects (If you use django-ninja and would like to publish your feedback, please email ppr.vitaly@gmail.com).
+  - **Production ready**: Used by multiple companies on live projects.
 
 
 
-![Django Ninja REST Framework](docs/docs/img/benchmark.png)
+![Django Shinobi REST Framework](docs/docs/img/benchmark.png)
 
-**Documentation**: https://django-ninja.dev
+**Documentation**: https://pmdevita.github.io/django-shinobi
 
 ---
 
 ## Installation
 
 ```
-pip install django-ninja
+pip install django-shinobi
 ```
 
 
@@ -100,7 +102,7 @@ You will see the automatic interactive API documentation (provided by <a href="h
 
 ## What next?
 
- - Read the full documentation here - https://django-ninja.dev
+ - Read the full documentation here - https://pmdevita.github.io/django-shinobi
  - To support this project, please give star it on Github. ![github star](docs/docs/img/github-star.png)
- - Share it [via Twitter](https://twitter.com/intent/tweet?text=Check%20out%20Django%20Ninja%20-%20Fast%20Django%20REST%20Framework%20-%20https%3A%2F%2Fdjango-ninja.dev)
+ - Share it [via Twitter](https://twitter.com/intent/tweet?text=Check%20out%20Django%20Shinobi%20-%20Fast%20Django%20REST%20Framework%20-%20https%3A%2F%2Fpmdevita.github.io/django-shinobi)
  - If you already using django-ninja, please share your feedback to ppr.vitaly@gmail.com
