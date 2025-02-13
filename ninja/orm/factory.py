@@ -62,7 +62,6 @@ class SchemaFactory:
 
         definitions = {}
         for fld in model_fields_list:
-            # types: ignore
             field_name, python_type, field_info = get_schema_field(
                 fld,
                 depth=depth,

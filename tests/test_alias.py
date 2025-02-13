@@ -70,7 +70,7 @@ def test_alias_foreignkey_schema():
     assert BookSchema.json_schema() == {
         "properties": {
             "authorId": {"title": "Author", "type": "integer"},
-            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Id"},
+            "id": {"title": "Id", "type": "integer"},
             "name": {"maxLength": 100, "title": "Name", "type": "string"},
             "publishedDate": {
                 "default": "2024-01-01",
@@ -79,7 +79,7 @@ def test_alias_foreignkey_schema():
                 "type": "string",
             },
         },
-        "required": ["name", "authorId"],
+        "required": ["id", "name", "authorId"],
         "title": "BookSchema",
         "type": "object",
     }
