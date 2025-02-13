@@ -161,7 +161,6 @@ def get_schema_field(
 
     else:
         _f_name, _f_path, _f_pos, field_options = field.deconstruct()
-        blank = field_options.get("blank", False)
         null = field_options.get("null", False)
         max_length = field_options.get("max_length")
 
@@ -176,7 +175,7 @@ def get_schema_field(
             ]
             raise ConfigError("\n".join(msg)) from e
 
-        if blank or null or optional:
+        if null or optional:
             default = None
             nullable = True
 
