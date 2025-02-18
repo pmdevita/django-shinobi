@@ -5,6 +5,7 @@ import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from pydantic import ValidationError
 from util import pydantic_arbitrary_dict_fix, pydantic_ref_fix
 
 from ninja.errors import ConfigError
@@ -617,3 +618,35 @@ def test_register_custom_field():
     Schema = create_schema(ModelWithCustomField)
     print(Schema.json_schema())
     assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"
+
+
+def test_model_field_choices():
+    class ChoiceModel(models.Model):
+        class Status(models.TextChoices):
+            DRAFT = "draft", "Draft"
+            PUBLISHED = "published", "Published"
+
+        status = models.CharField(
+            max_length=10, choices=Status.choices, default=Status.DRAFT
+        )
+        optional_status = models.CharField(
+            max_length=10, choices=Status.choices, null=True, blank=True
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    Schema1 = create_schema(ChoiceModel, fields=["status", "optional_status"])
+
+    instance = Schema1(status="draft")
+    assert instance.status == "draft"
+
+    with pytest.raises(ValidationError):
+        Schema1(status="invalid_status")
+
+    instance = Schema1(status="draft", optional_status=None)
+    assert instance.optional_status is None
+
+    json_schema = Schema1.json_schema()
+    assert "enum" in json_schema["properties"]["status"]
+    assert json_schema["properties"]["status"]["enum"] == ["draft", "published"]
