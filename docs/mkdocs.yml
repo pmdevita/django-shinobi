@@ -1,13 +1,9 @@
-site_name: Django Ninja
-site_description: Django Ninja - Django REST framework with high performance, easy to learn, fast to code.
-site_url: https://django-ninja.dev
-repo_name: vitalik/django-ninja
-repo_url: https://github.com/vitalik/django-ninja
+site_name: Django Shinobi
+site_description: Django Shinobi - Django REST framework with high performance, easy to learn, fast to code.
+site_url: https://pmdevita.github.io/django-shinobi/
+repo_name: pmdevita/django-shinobi
+repo_url: https://github.com/pmdevita/django-shinobi
 edit_uri: ""
-extra:
-  analytics:
-    provider: google
-    property: G-0E3XZ663ZR
 extra_css:
   - extra.css
 theme:
