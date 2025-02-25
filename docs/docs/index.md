@@ -1,13 +1,13 @@
-# Django Ninja - Fast Django REST Framework
+# Django Shinobi - Fast Django REST Framework
 
 <div style="background-color: black; color: red; font-size: 16px; padding: 8px;">
- RUSSIA INVADED UKRAINE - <a href="https://github.com/vitalik/django-ninja/issues/383">Please read</a>
+ RUSSIA INVADED UKRAINE - <a href="https://github.com/vitalik/django-ninja/issues/383">Please read (from Shinobi's original author)</a>
 </div>
 
 
-![Django Ninja](img/hero.png)
+![Django Shinobi](img/hero.png)
 
-Django Ninja is a web framework for building APIs with Django and Python 3.6+ type hints.
+Django Shinobi is a web framework for building APIs with Django and Python 3.6+ type hints.
 
 Key features:
 
@@ -16,16 +16,16 @@ Key features:
  - **Fast to code**: Type hints and automatic docs lets you focus only on business logic.
  - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
  - **Django friendly**: (obviously) has good integration with the Django core and ORM.
- - **Production ready**: Used by multiple companies on live projects (If you use Django Ninja and would like to publish your feedback, please email ppr.vitaly@gmail.com).
+ - **Production ready**: The original Ninja project is used by multiple companies on live projects.
 
 <a href="https://github.com/vitalik/django-ninja-benchmarks" target="_blank">Benchmarks</a>:
 
-![Django Ninja REST Framework](img/benchmark.png)
+![Django Shinobi REST Framework](img/benchmark.png)
 
 ## Installation
 
 ```
-pip install django-ninja
+pip install django-shinobi
 ```
 
 ## Quick Example
@@ -46,7 +46,7 @@ Now, run it as usual:
 ./manage.py runserver
 ```
 
-Note: You don't have to add Django Ninja to your installed apps for it to work.
+Note: You don't have to add Django Shinobi to your installed apps for it to work.
 
 ## Check it
 

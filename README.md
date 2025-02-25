@@ -2,7 +2,7 @@
 
 
 
-<a href="https://github.com/vitalik/django-ninja/issues/383">^ Please read ^</a>
+<a href="https://github.com/vitalik/django-ninja/issues/383">^ Please read (from the Shinobi's original author)^</a>
 
 
 
@@ -19,12 +19,17 @@
 ![Coverage](https://img.shields.io/codecov/c/github/pmdevita/django-shinobi)
 [![PyPI version](https://badge.fury.io/py/django-shinobi.svg)](https://badge.fury.io/py/django-shinobi)
 [![Downloads](https://static.pepy.tech/personalized-badge/django-shinobi?period=month&units=international_system&left_color=black&right_color=brightgreen&left_text=downloads/month)](https://pepy.tech/project/django-shinobi)
+[![Discord](https://dcbadge.limes.pink/api/server/ntFTXu7NNv?style=flat-square)](https://discord.gg/ntFTXu7NNv)
 
 # Django Shinobi - Fast Django REST Framework
 
-**Django Shinobi** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**. It's a fork 
-of the fantastic **[Django Ninja](https://github.com/vitalik/django-ninja)** library focused on community-desired 
-features and fixes.
+[Documentation](https://pmdevita.github.io/django-shinobi)
+
+**Django Shinobi** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**. 
+
+It's a fork of the fantastic **[Django Ninja](https://github.com/vitalik/django-ninja)** library focused on 
+community-desired features and fixes. Read the [announcement](https://github.com/pmdevita/django-shinobi/discussions/5) 
+for more info and check out the [roadmap](https://github.com/pmdevita/django-shinobi/discussions/6)!
 
 
  **Key features:**
@@ -34,7 +39,7 @@ features and fixes.
   - **Fast to code**: Type hints and automatic docs lets you focus only on business logic.
   - **Standards-based**: Based on the open standards for APIs: **OpenAPI** (previously known as Swagger) and **JSON Schema**.
   - **Django friendly**: (obviously) has good integration with the Django core and ORM.
-  - **Production ready**: Used by multiple companies on live projects.
+  - **Production ready**: The original Ninja project is used by multiple companies on live projects.
 
 
 
@@ -105,4 +110,4 @@ You will see the automatic interactive API documentation (provided by <a href="h
  - Read the full documentation here - https://pmdevita.github.io/django-shinobi
  - To support this project, please give star it on Github. ![github star](docs/docs/img/github-star.png)
  - Share it [via Twitter](https://twitter.com/intent/tweet?text=Check%20out%20Django%20Shinobi%20-%20Fast%20Django%20REST%20Framework%20-%20https%3A%2F%2Fpmdevita.github.io/django-shinobi)
- - If you already using django-ninja, please share your feedback to ppr.vitaly@gmail.com
+ - Share your feedback and discuss development on Discord https://discord.gg/ntFTXu7NNv

@@ -1,15 +1,15 @@
-# Welcome to Django Ninja 1.0
+# Welcome to Django Shinobi 1.0
 
 
 To get started install latest version with
 ```
-pip install -U django-ninja
+pip install -U django-shinobi
 ```
 
-django-ninja v1 is compatible with Python 3.7 and above.
+django-shinobi v1 is compatible with Python 3.7 and above.
 
 
-Django ninja seres 0.x is still supported but will receive only security updates and critical bug fixes
+Django Shinobi series 0.x is still supported but will receive only security updates and critical bug fixes
 
 
 
