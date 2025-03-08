@@ -20,6 +20,7 @@ from pydantic import BaseModel, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
+from ninja.enum import NinjaChoicesList
 from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
 from ninja.types import DictStrAny
@@ -184,6 +185,9 @@ def get_schema_field(
                 default_factory = field.default
             else:
                 default = field.default
+
+        if isinstance(field.choices, NinjaChoicesList):  # pragma: no cover
+            python_type = field.choices.enum
 
     if default_factory:
         default = PydanticUndefined

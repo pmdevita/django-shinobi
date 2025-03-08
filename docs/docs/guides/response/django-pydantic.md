@@ -174,3 +174,36 @@ def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
 ```
 
 in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`
+
+### Choices and Enums
+
+!!! info
+    Requires Django 5.0+ and Python 3.11+
+
+By default, ModelSchema, will ignore `choices` on a Model Field, and the schema will use
+the Field's type. 
+
+In Shinobi (and Django 5.0+), you can add `ChoicesMixin` to your Enum and ModelSchema will 
+automatically use it.
+
+```python
+from django.db import models
+from ninja import ModelSchema
+from ninja.enum import ChoicesMixin
+
+class NumberEnum(ChoicesMixin, models.TextChoices):
+    ONE = "ONE", "One"
+    TWO = "TWO", "Two"
+    THREE = "THREE", "Three"
+
+class MyModel(models.Model):
+    number = models.CharField(max_length=10, choices=NumberEnum)
+
+class MySchema(ModelSchema):
+    class Meta:
+        model = MyModel
+        fields = ["number"]
+```
+
+!!! info
+    Note that we are setting `choices` to `NumberEnum`, *not* `NumberEnum.choices`. 
