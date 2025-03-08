@@ -37,6 +37,7 @@ theme:
     repo: fontawesome/brands/github-alt
 nav:
   - Intro: index.md
+  - differences.md
   - motivation.md
   - Tutorial:
       - "First Steps": tutorial/index.md
