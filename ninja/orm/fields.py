@@ -176,6 +176,26 @@ def get_schema_field(
             ]
             raise ConfigError("\n".join(msg)) from e
 
+        if hasattr(field, "choices") and field.choices:
+            choices = [choice[0] for choice in field.choices]
+            if null or optional:
+                default = None
+                nullable = True
+                python_type = Union[python_type, None]
+
+            field_info = FieldInfo(
+                default=default,
+                alias=alias,
+                validation_alias=alias,
+                serialization_alias=alias,
+                default_factory=default_factory,
+                title=title,
+                description=description,
+                max_length=max_length,
+                json_schema_extra={"enum": choices},
+            )
+            return name, python_type, field_info
+
         if null or optional:
             default = None
             nullable = True
