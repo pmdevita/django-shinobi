@@ -15,12 +15,9 @@ A write-up will be completed for them if Shinobi releases 1.4.0 before Ninja.
 
 ### Improved Choices Enum support
 
-!!! info
-    Requires Django 5.0+ and Python 3.11+
-
 [Choices and Enums](/django-shinobi/guides/response/django-pydantic/#choices-and-enums)
 
-When you use a `Choices` enum on a Model in Django,
+When you use the `.choices` option on a Model field in Django,
 
 ```python
 class NumberEnum(TextChoices):
@@ -34,8 +31,17 @@ class MyModel(models.Model):
 
 Ninja will not detect the enum and map the type as just a string.
 
-In Shinobi, you can add `ChoicesMixin` to your Enum and ModelSchema will 
-automatically detect it.
+Shinobi will automatically detect you are using `.choices` and carry that over into your ModelSchema. In the 
+OpenAPI schema, it will appear as an [inline enum](https://swagger.io/docs/specification/v3_0/data-models/enums/).
+
+In some cases, it may be useful for an enum to be named and reusable between schemas or fields, particularly if you are 
+working with auto-generated OpenAPI clients. Shinobi can directly carry over a `TextChoices` or `IntegerChoices` enum 
+by adding the `ChoicesMixin` to it.
+
+!!! info
+    `ChoicesMixin` requires Django 5.0+ and Python 3.11+
+    Note that `choices` must be set to `NumberEnum`, *not* `NumberEnum.choices`, as shown in the
+    following example.
 
 ```python
 from ninja.enum import ChoicesMixin
@@ -49,8 +55,7 @@ class MyModel(models.Model):
     number = models.CharField(max_length=10, choices=NumberEnum)
 ```
 
-!!! info
-    Note that we are setting `choices` to `NumberEnum`, *not* `NumberEnum.choices`.
+This will be published to your OpenAPI schema as a [reusable enum](https://swagger.io/docs/specification/v3_0/data-models/enums/#reusable-enums).
 
 
 ## Bug Fixes
