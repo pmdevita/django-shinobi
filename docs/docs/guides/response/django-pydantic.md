@@ -177,14 +177,15 @@ in this example the `payload` argument will be a type of `dict` only fields that
 
 ### Choices and Enums
 
+If you define a Model field with `.choices`, `ModelSchema` will automatically carry that into your schema.
+
+However, if you are reusing the enum in multiple places, or if you are working with auto-generated OpenAPI clients, 
+it may be useful to create enum objects that are reusable between schemas and fields. 
+Shinobi can directly carry over a `TextChoices` or `IntegerChoices` enum by adding the `ChoicesMixin` to it.
+
 !!! info
-    Requires Django 5.0+ and Python 3.11+
+    `ChoicesMixin` requires Django 5.0+ and Python 3.11+
 
-By default, ModelSchema, will ignore `choices` on a Model Field, and the schema will use
-the Field's type. 
-
-In Shinobi (and Django 5.0+), you can add `ChoicesMixin` to your Enum and ModelSchema will 
-automatically use it.
 
 ```python
 from django.db import models
@@ -206,4 +207,4 @@ class MySchema(ModelSchema):
 ```
 
 !!! info
-    Note that we are setting `choices` to `NumberEnum`, *not* `NumberEnum.choices`. 
+    Note that `choices` must be set to `NumberEnum`, *not* `NumberEnum.choices`.

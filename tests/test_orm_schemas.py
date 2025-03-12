@@ -258,7 +258,7 @@ def test_django_31_fields():
     django.VERSION[0] < 5 or version_info < (3, 11),
     reason="Not supported on Django <5 and Python <3.11",
 )
-def test_enum_field():
+def test_choicesmixin_choices_field():
     class TestEnum(ChoicesMixin, TextChoices):
         ONE = "ONE", "One"
         TWO = "TWO", "Two"

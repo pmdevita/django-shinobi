@@ -19,6 +19,7 @@ from django.db.models.fields import Field as DjangoField
 from pydantic import BaseModel, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
+from typing_extensions import Literal
 
 from ninja.enum import NinjaChoicesList
 from ninja.errors import ConfigError
@@ -176,26 +177,6 @@ def get_schema_field(
             ]
             raise ConfigError("\n".join(msg)) from e
 
-        if hasattr(field, "choices") and field.choices:
-            choices = [choice[0] for choice in field.choices]
-            if null or optional:
-                default = None
-                nullable = True
-                python_type = Union[python_type, None]
-
-            field_info = FieldInfo(
-                default=default,
-                alias=alias,
-                validation_alias=alias,
-                serialization_alias=alias,
-                default_factory=default_factory,
-                title=title,
-                description=description,
-                max_length=max_length,
-                json_schema_extra={"enum": choices},
-            )
-            return name, python_type, field_info
-
         if null or optional:
             default = None
             nullable = True
@@ -206,8 +187,12 @@ def get_schema_field(
             else:
                 default = field.default
 
-        if isinstance(field.choices, NinjaChoicesList):  # pragma: no cover
-            python_type = field.choices.enum
+        if field.choices is not None:
+            if isinstance(field.choices, NinjaChoicesList):  # pragma: no cover
+                python_type = field.choices.enum
+            else:
+                choices = tuple(choice[0] for choice in field.choices)
+                python_type = Literal[choices]
 
     if default_factory:
         default = PydanticUndefined
