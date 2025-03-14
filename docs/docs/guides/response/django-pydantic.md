@@ -174,3 +174,37 @@ def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
 ```
 
 in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`
+
+### Choices and Enums
+
+If you define a Model field with `.choices`, `ModelSchema` will automatically carry that into your schema.
+
+However, if you are reusing the enum in multiple places, or if you are working with auto-generated OpenAPI clients, 
+it may be useful to create enum objects that are reusable between schemas and fields. 
+Shinobi can directly carry over a `TextChoices` or `IntegerChoices` enum by adding the `ChoicesMixin` to it.
+
+!!! info
+    `ChoicesMixin` requires Django 5.0+ and Python 3.11+
+
+
+```python
+from django.db import models
+from ninja import ModelSchema
+from ninja.enum import ChoicesMixin
+
+class NumberEnum(ChoicesMixin, models.TextChoices):
+    ONE = "ONE", "One"
+    TWO = "TWO", "Two"
+    THREE = "THREE", "Three"
+
+class MyModel(models.Model):
+    number = models.CharField(max_length=10, choices=NumberEnum)
+
+class MySchema(ModelSchema):
+    class Meta:
+        model = MyModel
+        fields = ["number"]
+```
+
+!!! info
+    Note that `choices` must be set to `NumberEnum`, *not* `NumberEnum.choices`.
