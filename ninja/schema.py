@@ -94,7 +94,7 @@ class DjangoGetter:
             return list(result.all())
 
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
-            return list(result)
+            return result
 
         if callable(result):
             return result()
@@ -206,26 +206,9 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
         return result
 
 
-class Schema(BaseModel, metaclass=ResolverMetaclass):
+class Schema(BaseModel, metaclass=ModelMetaclass):
     class Config:
         from_attributes = True  # aka orm_mode
-
-    @model_validator(mode="wrap")
-    @classmethod
-    def _run_root_validator(
-        cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
-    ) -> Any:
-        # If Pydantic intends to validate against the __dict__ of the immediate Schema
-        # object, then we need to call `handler` directly on `values` before the conversion
-        # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
-        # will not persist to the original object.
-        forbids_extra = cls.model_config.get("extra") == "forbid"
-        should_validate_assignment = cls.model_config.get("validate_assignment", False)
-        if forbids_extra or should_validate_assignment:
-            handler(values)
-
-        values = DjangoGetter(values, cls, info.context)
-        return handler(values)
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:

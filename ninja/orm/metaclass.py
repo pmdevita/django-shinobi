@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Union, no_type_check
 
 from django.db.models import Model as DjangoModel
 from pydantic.dataclasses import dataclass
+from pydantic._internal._model_construction import ModelMetaclass
 
 from ninja.errors import ConfigError
 from ninja.orm.factory import create_schema
@@ -65,7 +66,7 @@ class MetaConf:
         )
 
 
-class ModelSchemaMetaclass(ResolverMetaclass):
+class ModelSchemaMetaclass(ModelMetaclass):
     @no_type_check
     def __new__(
         mcs,
