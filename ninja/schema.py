@@ -210,10 +210,10 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         from_attributes = True  # aka orm_mode
 
-    @model_validator(mode="wrap")
+    @model_validator(mode="before")
     @classmethod
     def _run_root_validator(
-        cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
+        cls, values: Any, info: ValidationInfo
     ) -> Any:
         # If Pydantic intends to validate against the __dict__ of the immediate Schema
         # object, then we need to call `handler` directly on `values` before the conversion
@@ -222,10 +222,9 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         forbids_extra = cls.model_config.get("extra") == "forbid"
         should_validate_assignment = cls.model_config.get("validate_assignment", False)
         if forbids_extra or should_validate_assignment:
-            handler(values)
+            return values
 
-        values = DjangoGetter(values, cls, info.context)
-        return handler(values)
+        return DjangoGetter(values, cls, info.context)
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
