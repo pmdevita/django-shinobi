@@ -19,6 +19,8 @@ dotted attributes and resolver methods. For example::
 """
 
 import warnings
+from collections.abc import Collection
+from inspect import isclass
 from typing import (
     Any,
     Callable,
@@ -26,21 +28,21 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    no_type_check,
+    no_type_check, get_args, _AnnotatedAlias, Annotated, get_origin,
 )
 
 import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
+from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator, field_validator
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from typing_extensions import dataclass_transform
 
 from ninja.signature.utils import get_args_names, has_kwargs
-from ninja.types import DictStrAny
+from ninja.types import DictStrAny, FileFieldType
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
@@ -94,7 +96,7 @@ class DjangoGetter:
             return list(result.all())
 
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
-            return list(result)
+            return result
 
         if callable(result):
             return result()
@@ -178,10 +180,30 @@ class ResolverMetaclass(ModelMetaclass):
                 continue  # pragma: no cover
             resolvers[attr[8:]] = Resolver(resolve_func)
 
+        # Rewrite any annotations looking for collections to include the ManagerValidator
+        for annotation_name, annotation in namespace.get("__annotations__", {}).items():
+            if is_collection_type(annotation):
+                namespace[f"__ninja_manager_validator_{annotation_name}"] = field_validator(annotation_name, mode="before")(_manager_to_queryset)
+            if is_filefield_type(annotation):
+                namespace[f"__ninja_file_validator_{annotation_name}"] = field_validator(annotation_name, mode="before")(_validate_file)
+
         result = super().__new__(cls, name, bases, namespace, **kwargs)
         result._ninja_resolvers = resolvers
         return result
 
+
+# If encountered, evaluates a Manager into a QuerySet
+def _manager_to_queryset(value: Manager | Any) -> QuerySet | Any:
+    if isinstance(value, Manager):
+        return value.all()
+    return value
+
+def _validate_file(value: FieldFile | Any) -> str | Any | None:
+    if isinstance(value, FieldFile):
+        if not value:
+            return None
+        return value.url
+    return value
 
 class NinjaGenerateJsonSchema(GenerateJsonSchema):
     def default_schema(self, schema: Any) -> JsonSchemaValue:
@@ -210,7 +232,7 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         from_attributes = True  # aka orm_mode
 
-    @model_validator(mode="wrap")
+    # @model_validator(mode="wrap")
     @classmethod
     def _run_root_validator(
         cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
@@ -247,3 +269,62 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
             stacklevel=2,
         )
         return cls.json_schema()
+
+
+
+def is_collection_type(
+        type_annotation: Type
+) -> bool:
+    """
+    Is the given Type a Collection or a Sequence?
+    :param type_annotation:
+    :return: bool
+    """
+    def wrapper(t: Type) -> bool:
+        if isclass(t):
+            if t in (str,):
+                return False
+            return issubclass(t, Collection)
+        else:
+            return False
+
+    return has_type(type_annotation, wrapper)
+
+
+def is_filefield_type(type_annotation: Type) -> bool:
+    def wrapper(t: Type) -> bool:
+        return t is FileFieldType
+
+    return has_type(type_annotation, wrapper)
+
+
+def has_type(type_annotation: Type, f: Callable[[Type], bool]) -> bool:
+    # Unwrap any type aliases (List, Set, etc.)
+    origin = get_origin(type_annotation)
+    if origin is not None and f(origin):
+        return True
+
+    # Try to decompose the type
+    args = get_args(type_annotation)
+
+    # Type can't be decomposed further, check the annotation itself
+    if len(args) == 0:
+        return f(type_annotation)
+
+    # Annotations should only have their first argument resolved
+    if isinstance(type_annotation, _AnnotatedAlias):
+        return has_type(args[0], f)
+
+    # Filter out anything we don't need
+    if len(args) > 1:
+        new_args = []
+        for a in args:
+            # Optional type hint, isn't required
+            if a == type(None):
+                continue
+
+            new_args.append(a)
+
+        args = new_args
+
+    return any([has_type(i, f) for i in args])

@@ -1,13 +1,16 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Annotated
 from unittest.mock import Mock
 
 import pytest
-from django.db.models import Manager, QuerySet
+from django.db.models import Manager, QuerySet, FileField
 from django.db.models.fields.files import ImageFieldFile
+from pydantic import BeforeValidator
 from pydantic_core import ValidationError
 
 from ninja import Schema
 from ninja.schema import DjangoGetter, Field
+from ninja.schema import is_collection_type, is_filefield_type
+from ninja.types import FileFieldType
 
 
 class FakeManager(Manager):
@@ -65,7 +68,7 @@ class UserSchema(Schema):
     name: str
     groups: List[int] = Field(..., alias="group_set")
     tags: List[TagSchema]
-    avatar: Optional[str] = None
+    avatar: Optional[FileFieldType] = None
 
 
 class UserWithBossSchema(UserSchema):
@@ -101,6 +104,26 @@ def test_schema():
         "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
     }
+    print(UserSchema.json_schema())
+    assert UserSchema.json_schema() == {'$defs': {'TagSchema': {'properties': {'id': {'title': 'Id',
+                                                                                      'type': 'integer'},
+                                                                               'title': {'title': 'Title',
+                                                                                         'type': 'string'}},
+                                                                'required': ['id', 'title'],
+                                                                'title': 'TagSchema',
+                                                                'type': 'object'}},
+                                        'properties': {'avatar': {'anyOf': [{'type': 'string'}, {'type': 'null'}],
+                                                                  'title': 'Avatar'},
+                                                       'group_set': {'items': {'type': 'integer'},
+                                                                     'title': 'Group Set',
+                                                                     'type': 'array'},
+                                                       'name': {'title': 'Name', 'type': 'string'},
+                                                       'tags': {'items': {'$ref': '#/$defs/TagSchema'},
+                                                                'title': 'Tags',
+                                                                'type': 'array'}},
+                                        'required': ['name', 'group_set', 'tags'],
+                                        'title': 'UserSchema',
+                                        'type': 'object'}
 
 
 def test_schema_with_image():
@@ -227,3 +250,27 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
+
+
+def test_is_type_collection():
+    assert is_collection_type(list) is True
+    assert is_collection_type(set) is True
+    assert is_collection_type(int) is False
+    assert is_collection_type(Optional[list]) is True
+    assert is_collection_type(Union[list, None]) is True
+    assert is_collection_type(List[int]) is True
+    assert is_collection_type(Annotated[list, BeforeValidator(lambda x: x)]) is True
+    assert is_collection_type(Annotated[int, BeforeValidator(lambda x: x)]) is False
+    assert is_collection_type(Union[int, TagSchema]) is False
+    assert is_collection_type(Union[list, TagSchema]) is True
+    assert is_collection_type(Union[int, User()]) is False
+
+def test_is_filefield_type():
+    assert is_filefield_type(FileFieldType) is True
+    assert is_filefield_type(int) is False
+    assert is_filefield_type(Union[FileFieldType, None]) is True
+    assert is_filefield_type(Annotated[FileFieldType, BeforeValidator(lambda x: x)]) is True
+    assert is_filefield_type(Annotated[int, BeforeValidator(lambda x: x)]) is False
+    assert is_filefield_type(Union[int, TagSchema]) is False
+    assert is_filefield_type(Union[FileFieldType, TagSchema]) is True
+    assert is_filefield_type(Union[int, User()]) is False

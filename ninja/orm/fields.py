@@ -22,7 +22,7 @@ from pydantic_core import PydanticUndefined, core_schema
 
 from ninja.errors import ConfigError
 from ninja.openapi.schema import OpenAPISchema
-from ninja.types import DictStrAny
+from ninja.types import DictStrAny, FileFieldType
 
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
 
@@ -65,12 +65,13 @@ TYPES = {
     "DateTimeField": datetime.datetime,
     "DecimalField": Decimal,
     "DurationField": datetime.timedelta,
-    "FileField": str,
+    "FileField": FileFieldType,
     "FilePathField": str,
     "FloatField": float,
     "GenericIPAddressField": IPvAnyAddress,
     "IPAddressField": IPvAnyAddress,
     "IntegerField": int,
+    "ImageField": FileFieldType,
     "JSONField": AnyObject,
     "NullBooleanField": bool,
     "PositiveBigIntegerField": int,
