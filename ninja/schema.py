@@ -28,18 +28,27 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    no_type_check, get_args, _AnnotatedAlias, Annotated, get_origin,
+    get_args,
+    get_origin,
+    no_type_check,
 )
 
 import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+    validator,
+)
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
-from typing_extensions import dataclass_transform
+from typing_extensions import _AnnotatedAlias, dataclass_transform
 
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny, FileFieldType
@@ -180,12 +189,25 @@ class ResolverMetaclass(ModelMetaclass):
                 continue  # pragma: no cover
             resolvers[attr[8:]] = Resolver(resolve_func)
 
+        if resolvers:
+            namespace["__ninja_resolvers_validator"] = model_validator(mode="before")(
+                _validate_resolvers
+            )
+
         # Rewrite any annotations looking for collections to include the ManagerValidator
         for annotation_name, annotation in namespace.get("__annotations__", {}).items():
+            if annotation_name.startswith("_"):
+                continue
             if is_collection_type(annotation):
-                namespace[f"__ninja_manager_validator_{annotation_name}"] = field_validator(annotation_name, mode="before")(_manager_to_queryset)
+                namespace[f"__ninja_manager_validator_{annotation_name}"] = (
+                    field_validator(
+                        annotation_name, mode="before"
+                    )(_manager_to_queryset)
+                )
             if is_filefield_type(annotation):
-                namespace[f"__ninja_file_validator_{annotation_name}"] = field_validator(annotation_name, mode="before")(_validate_file)
+                namespace[f"__ninja_file_validator_{annotation_name}"] = (
+                    field_validator(annotation_name, mode="before")(_validate_file)
+                )
 
         result = super().__new__(cls, name, bases, namespace, **kwargs)
         result._ninja_resolvers = resolvers
@@ -193,17 +215,23 @@ class ResolverMetaclass(ModelMetaclass):
 
 
 # If encountered, evaluates a Manager into a QuerySet
-def _manager_to_queryset(value: Manager | Any) -> QuerySet | Any:
+def _manager_to_queryset(value: Union[Manager, Any]) -> Union[QuerySet, Any]:
     if isinstance(value, Manager):
         return value.all()
     return value
 
-def _validate_file(value: FieldFile | Any) -> str | Any | None:
+
+def _validate_file(value: Union[FieldFile, Any]) -> Union[str, Any, None]:
     if isinstance(value, FieldFile):
         if not value:
             return None
         return value.url
     return value
+
+
+def _validate_resolvers(cls: Type["Schema"], value: Any, info: ValidationInfo) -> Any:
+    return DjangoGetter(value, cls, info.context)
+
 
 class NinjaGenerateJsonSchema(GenerateJsonSchema):
     def default_schema(self, schema: Any) -> JsonSchemaValue:
@@ -271,15 +299,13 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
         return cls.json_schema()
 
 
-
-def is_collection_type(
-        type_annotation: Type
-) -> bool:
+def is_collection_type(type_annotation: Type) -> bool:
     """
     Is the given Type a Collection or a Sequence?
     :param type_annotation:
     :return: bool
     """
+
     def wrapper(t: Type) -> bool:
         if isclass(t):
             if t in (str,):
@@ -320,11 +346,11 @@ def has_type(type_annotation: Type, f: Callable[[Type], bool]) -> bool:
         new_args = []
         for a in args:
             # Optional type hint, isn't required
-            if a == type(None):
+            if a is None:
                 continue
 
             new_args.append(a)
 
-        args = new_args
+        args = tuple(new_args)
 
-    return any([has_type(i, f) for i in args])
+    return any(has_type(i, f) for i in args)

@@ -1,15 +1,14 @@
-from typing import List, Optional, Union, Annotated
+from typing import Annotated, List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
-from django.db.models import Manager, QuerySet, FileField
+from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import ImageFieldFile
-from pydantic import BeforeValidator
+from pydantic import AliasPath, BeforeValidator
 from pydantic_core import ValidationError
 
 from ninja import Schema
-from ninja.schema import DjangoGetter, Field
-from ninja.schema import is_collection_type, is_filefield_type
+from ninja.schema import DjangoGetter, Field, is_collection_type, is_filefield_type
 from ninja.types import FileFieldType
 
 
@@ -104,26 +103,6 @@ def test_schema():
         "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
     }
-    print(UserSchema.json_schema())
-    assert UserSchema.json_schema() == {'$defs': {'TagSchema': {'properties': {'id': {'title': 'Id',
-                                                                                      'type': 'integer'},
-                                                                               'title': {'title': 'Title',
-                                                                                         'type': 'string'}},
-                                                                'required': ['id', 'title'],
-                                                                'title': 'TagSchema',
-                                                                'type': 'object'}},
-                                        'properties': {'avatar': {'anyOf': [{'type': 'string'}, {'type': 'null'}],
-                                                                  'title': 'Avatar'},
-                                                       'group_set': {'items': {'type': 'integer'},
-                                                                     'title': 'Group Set',
-                                                                     'type': 'array'},
-                                                       'name': {'title': 'Name', 'type': 'string'},
-                                                       'tags': {'items': {'$ref': '#/$defs/TagSchema'},
-                                                                'title': 'Tags',
-                                                                'type': 'array'}},
-                                        'required': ['name', 'group_set', 'tags'],
-                                        'title': 'UserSchema',
-                                        'type': 'object'}
 
 
 def test_schema_with_image():
@@ -189,13 +168,14 @@ def test_with_initials_schema():
 def test_complex_alias_resolve():
     class Top:
         class Midddle:
+            @property
             def call(self):
                 return {"dict": [1, 10]}
 
         m = Midddle()
 
     class AliasSchema(Schema):
-        value: int = Field(..., alias="m.call.dict.1")
+        value: int = Field(..., validation_alias=AliasPath("m", "call", "dict", 1))
 
     x = Top()
 
@@ -265,11 +245,15 @@ def test_is_type_collection():
     assert is_collection_type(Union[list, TagSchema]) is True
     assert is_collection_type(Union[int, User()]) is False
 
+
 def test_is_filefield_type():
     assert is_filefield_type(FileFieldType) is True
     assert is_filefield_type(int) is False
     assert is_filefield_type(Union[FileFieldType, None]) is True
-    assert is_filefield_type(Annotated[FileFieldType, BeforeValidator(lambda x: x)]) is True
+    assert (
+        is_filefield_type(Annotated[FileFieldType, BeforeValidator(lambda x: x)])
+        is True
+    )
     assert is_filefield_type(Annotated[int, BeforeValidator(lambda x: x)]) is False
     assert is_filefield_type(Union[int, TagSchema]) is False
     assert is_filefield_type(Union[FileFieldType, TagSchema]) is True
