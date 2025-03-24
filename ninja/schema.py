@@ -24,6 +24,7 @@ from inspect import isclass
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Dict,
     Type,
     TypeVar,
@@ -196,7 +197,7 @@ class ResolverMetaclass(ModelMetaclass):
 
         # Rewrite any annotations looking for collections to include the ManagerValidator
         for annotation_name, annotation in namespace.get("__annotations__", {}).items():
-            if annotation_name.startswith("_"):
+            if annotation_name.startswith("_") or is_classvar_type(annotation):
                 continue
             if is_collection_type(annotation):
                 namespace[f"__ninja_manager_validator_{annotation_name}"] = (
@@ -320,6 +321,13 @@ def is_collection_type(type_annotation: Type) -> bool:
 def is_filefield_type(type_annotation: Type) -> bool:
     def wrapper(t: Type) -> bool:
         return t is FileFieldType
+
+    return has_type(type_annotation, wrapper)
+
+
+def is_classvar_type(type_annotation: Type) -> bool:
+    def wrapper(t: Type) -> bool:
+        return t is ClassVar
 
     return has_type(type_annotation, wrapper)
 

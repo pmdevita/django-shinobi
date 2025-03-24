@@ -1,4 +1,4 @@
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, ClassVar, List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
@@ -92,6 +92,10 @@ class ResolveAttrSchema(Schema):
 
     id: str
     resolve_attr: str
+
+
+class ClassVarSchema(Schema):
+    value: ClassVar[list[int]]
 
 
 def test_schema():
