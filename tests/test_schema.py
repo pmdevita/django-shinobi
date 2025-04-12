@@ -1,15 +1,15 @@
-from typing import Annotated, ClassVar, List, Optional, Union
+from typing import ClassVar, List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
 from django.db.models import Manager, QuerySet
-from django.db.models.fields.files import ImageFieldFile
-from pydantic import AliasPath, BeforeValidator
+from django.db.models.fields.files import FileField, ImageFieldFile
+from pydantic import AliasPath
 from pydantic_core import ValidationError
 
 from ninja import Schema
-from ninja.schema import DjangoGetter, Field, is_collection_type, is_filefield_type
-from ninja.types import FileFieldType
+from ninja.files import FileFieldType
+from ninja.schema import DjangoGetter, Field
 
 
 class FakeManager(Manager):
@@ -44,10 +44,28 @@ class Boss:
     title = "CEO"
 
 
+class MockFile:
+    def __init__(self):
+        self.name = "asdf"
+
+
+class MockStorage:
+    def __init__(self):
+        pass
+
+    def url(self, name: str) -> str:
+        return name
+
+
+file_field = FileField(storage=MockStorage())
+null_file = ImageFieldFile(None, Mock(), name=None)
+non_null_file = ImageFieldFile(MockFile(), file_field, name="mockfile")
+
+
 class User:
     name = "John Smith"
     group_set = FakeManager([1, 2, 3])
-    avatar = ImageFieldFile(None, Mock(), name=None)
+    avatar = null_file
     boss: Optional[Boss] = Boss()
 
     @property
@@ -96,6 +114,11 @@ class ResolveAttrSchema(Schema):
 
 class ClassVarSchema(Schema):
     value: ClassVar[list[int]]
+
+
+class FileSchema(Schema):
+    non_null_file: FileFieldType
+    null_file: Optional[FileFieldType]
 
 
 def test_schema():
@@ -147,6 +170,33 @@ def test_with_boss_schema():
         "groups": [1, 2, 3],
         "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
+    }
+
+
+def test_file_field_schema():
+    first = FileSchema(non_null_file=non_null_file, null_file=null_file)
+    assert first.non_null_file is not None and first.null_file is None
+
+    second = FileSchema(non_null_file=non_null_file, null_file=non_null_file)
+    assert second.non_null_file is not None and second.null_file is not None
+
+    with pytest.raises(ValidationError):
+        FileSchema(non_null_file=null_file, null_file=null_file)
+
+    fourth = FileSchema(non_null_file="asdf", null_file=None)
+    assert fourth.non_null_file == "asdf" and fourth.null_file is None
+
+    assert first.json_schema() == {
+        "properties": {
+            "non_null_file": {"title": "Non Null File", "type": "string"},
+            "null_file": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Null File",
+            },
+        },
+        "required": ["non_null_file", "null_file"],
+        "title": "FileSchema",
+        "type": "object",
     }
 
 
@@ -234,31 +284,3 @@ def test_schema_skips_validation_when_validate_assignment_False(
         assert schema_inst.str_var == 5
     except ValidationError as ve:
         raise AssertionError() from ve
-
-
-def test_is_type_collection():
-    assert is_collection_type(list) is True
-    assert is_collection_type(set) is True
-    assert is_collection_type(int) is False
-    assert is_collection_type(Optional[list]) is True
-    assert is_collection_type(Union[list, None]) is True
-    assert is_collection_type(List[int]) is True
-    assert is_collection_type(Annotated[list, BeforeValidator(lambda x: x)]) is True
-    assert is_collection_type(Annotated[int, BeforeValidator(lambda x: x)]) is False
-    assert is_collection_type(Union[int, TagSchema]) is False
-    assert is_collection_type(Union[list, TagSchema]) is True
-    assert is_collection_type(Union[int, User()]) is False
-
-
-def test_is_filefield_type():
-    assert is_filefield_type(FileFieldType) is True
-    assert is_filefield_type(int) is False
-    assert is_filefield_type(Union[FileFieldType, None]) is True
-    assert (
-        is_filefield_type(Annotated[FileFieldType, BeforeValidator(lambda x: x)])
-        is True
-    )
-    assert is_filefield_type(Annotated[int, BeforeValidator(lambda x: x)]) is False
-    assert is_filefield_type(Union[int, TagSchema]) is False
-    assert is_filefield_type(Union[FileFieldType, TagSchema]) is True
-    assert is_filefield_type(Union[int, User()]) is False

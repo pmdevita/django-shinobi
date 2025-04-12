@@ -21,8 +21,9 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
 
 from ninja.errors import ConfigError
+from ninja.files import FileFieldType
 from ninja.openapi.schema import OpenAPISchema
-from ninja.types import DictStrAny, FileFieldType
+from ninja.types import DictStrAny
 
 __all__ = ["create_m2m_link_type", "get_schema_field", "get_related_field_schema"]
 

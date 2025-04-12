@@ -24,13 +24,10 @@ from inspect import isclass
 from typing import (
     Any,
     Callable,
-    ClassVar,
     Dict,
     Type,
     TypeVar,
     Union,
-    get_args,
-    get_origin,
     no_type_check,
 )
 
@@ -49,10 +46,11 @@ from pydantic import (
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
-from typing_extensions import _AnnotatedAlias, dataclass_transform
+from typing_extensions import dataclass_transform
 
+from ninja.signature.details import has_type, is_classvar_type
 from ninja.signature.utils import get_args_names, has_kwargs
-from ninja.types import DictStrAny, FileFieldType
+from ninja.types import DictStrAny
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
@@ -199,15 +197,12 @@ class ResolverMetaclass(ModelMetaclass):
         for annotation_name, annotation in namespace.get("__annotations__", {}).items():
             if annotation_name.startswith("_") or is_classvar_type(annotation):
                 continue
+            # Attach a validator to evaluate QuerySets for collection type fields
             if is_collection_type(annotation):
                 namespace[f"__ninja_manager_validator_{annotation_name}"] = (
                     field_validator(
                         annotation_name, mode="before"
                     )(_manager_to_queryset)
-                )
-            if is_filefield_type(annotation):
-                namespace[f"__ninja_file_validator_{annotation_name}"] = (
-                    field_validator(annotation_name, mode="before")(_validate_file)
                 )
 
         result = super().__new__(cls, name, bases, namespace, **kwargs)
@@ -219,14 +214,6 @@ class ResolverMetaclass(ModelMetaclass):
 def _manager_to_queryset(value: Union[Manager, Any]) -> Union[QuerySet, Any]:
     if isinstance(value, Manager):
         return value.all()
-    return value
-
-
-def _validate_file(value: Union[FieldFile, Any]) -> Union[str, Any, None]:
-    if isinstance(value, FieldFile):
-        if not value:
-            return None
-        return value.url
     return value
 
 
@@ -309,56 +296,10 @@ def is_collection_type(type_annotation: Type) -> bool:
 
     def wrapper(t: Type) -> bool:
         if isclass(t):
-            if t in (str,):
+            if t is str:
                 return False
             return issubclass(t, Collection)
         else:
             return False
 
     return has_type(type_annotation, wrapper)
-
-
-def is_filefield_type(type_annotation: Type) -> bool:
-    def wrapper(t: Type) -> bool:
-        return t is FileFieldType
-
-    return has_type(type_annotation, wrapper)
-
-
-def is_classvar_type(type_annotation: Type) -> bool:
-    def wrapper(t: Type) -> bool:
-        return t is ClassVar
-
-    return has_type(type_annotation, wrapper)
-
-
-def has_type(type_annotation: Type, f: Callable[[Type], bool]) -> bool:
-    # Unwrap any type aliases (List, Set, etc.)
-    origin = get_origin(type_annotation)
-    if origin is not None and f(origin):
-        return True
-
-    # Try to decompose the type
-    args = get_args(type_annotation)
-
-    # Type can't be decomposed further, check the annotation itself
-    if len(args) == 0:
-        return f(type_annotation)
-
-    # Annotations should only have their first argument resolved
-    if isinstance(type_annotation, _AnnotatedAlias):
-        return has_type(args[0], f)
-
-    # Filter out anything we don't need
-    if len(args) > 1:
-        new_args = []
-        for a in args:
-            # Optional type hint, isn't required
-            if a is None:
-                continue
-
-            new_args.append(a)
-
-        args = tuple(new_args)
-
-    return any(has_type(i, f) for i in args)

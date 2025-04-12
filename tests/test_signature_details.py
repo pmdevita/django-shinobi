@@ -1,9 +1,13 @@
 import typing
 from sys import version_info
+from typing import Annotated, List, Optional, Union
 
 import pytest
+from pydantic import BeforeValidator
 
+from ninja.schema import is_collection_type as schema_is_collection_type
 from ninja.signature.details import is_collection_type
+from tests.test_schema import TagSchema, User
 
 
 @pytest.mark.parametrize(
@@ -49,3 +53,21 @@ from ninja.signature.details import is_collection_type
 )
 def test_is_collection_type_returns(annotation: typing.Any, expected: bool):
     assert is_collection_type(annotation) is expected
+
+
+def test_is_type_collection():
+    assert schema_is_collection_type(list) is True
+    assert schema_is_collection_type(set) is True
+    assert schema_is_collection_type(int) is False
+    assert schema_is_collection_type(Optional[list]) is True
+    assert schema_is_collection_type(Union[list, None]) is True
+    assert schema_is_collection_type(List[int]) is True
+    assert (
+        schema_is_collection_type(Annotated[list, BeforeValidator(lambda x: x)]) is True
+    )
+    assert (
+        schema_is_collection_type(Annotated[int, BeforeValidator(lambda x: x)]) is False
+    )
+    assert schema_is_collection_type(Union[int, TagSchema]) is False
+    assert schema_is_collection_type(Union[list, TagSchema]) is True
+    assert schema_is_collection_type(Union[int, User()]) is False
