@@ -89,9 +89,19 @@ class UserSchema(Schema):
 
 
 class UserWithBossSchema(UserSchema):
+    _compatibility = True
     boss: Optional[str] = Field(None, alias="boss.name")
     has_boss: bool
     boss_title: Optional[str] = Field(None, alias="get_boss_title")
+
+    @staticmethod
+    def resolve_has_boss(obj):
+        return bool(obj.boss)
+
+
+class NewUserWithBossSchema(UserSchema):
+    boss: Optional[str] = Field(None, alias="boss.name")
+    has_boss: bool
 
     @staticmethod
     def resolve_has_boss(obj):
@@ -167,6 +177,17 @@ def test_with_boss_schema():
         "boss": None,
         "has_boss": False,
         "boss_title": None,
+        "groups": [1, 2, 3],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
+        "avatar": None,
+    }
+
+    user = User()
+    schema = NewUserWithBossSchema.from_orm(user)
+    assert schema.dict() == {
+        "name": "John Smith",
+        "boss": "Jane Jackson",
+        "has_boss": True,
         "groups": [1, 2, 3],
         "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,

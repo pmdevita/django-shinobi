@@ -21,15 +21,7 @@ dotted attributes and resolver methods. For example::
 import warnings
 from collections.abc import Collection
 from inspect import isclass
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Type,
-    TypeVar,
-    Union,
-    no_type_check,
-)
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, no_type_check
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -44,10 +36,12 @@ from pydantic import (
     validator,
 )
 from pydantic._internal._model_construction import ModelMetaclass
+from pydantic.fields import FieldInfo
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from typing_extensions import dataclass_transform
 
+from ninja.conf import settings
 from ninja.signature.details import has_type, is_classvar_type
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
@@ -120,6 +114,32 @@ class DjangoGetter:
         return f"<DjangoGetter: {repr(self._obj)}>"
 
 
+class ObjectPatcher:
+    __slots__ = ("_obj", "_dict")
+
+    def __init__(self, obj: Any):
+        self._obj = obj
+        self._dict: Dict[str, Any] = {}
+
+    def __getattr__(self, key: str) -> Any:
+        if key in self._dict:
+            value = self._dict[key]
+        else:
+            if isinstance(self._obj, dict):
+                if key not in self._obj:
+                    raise AttributeError(key)
+                value = self._obj[key]
+            else:
+                value = getattr(self._obj, key)
+        return value
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._dict[key] = value
+
+    def __repr__(self) -> str:
+        return f"<ObjectPatcher: {repr(self._obj)} + {repr(self._dict)}>"
+
+
 class Resolver:
     __slots__ = ("_func", "_static", "_takes_context")
     _static: bool
@@ -136,6 +156,15 @@ class Resolver:
 
         arg_names = get_args_names(self._func)
         self._takes_context = has_kwargs(self._func) or "context" in arg_names
+
+    def run(self, value: Any, info: Any) -> Any:
+        kwargs = {}
+        if self._takes_context:
+            kwargs["context"] = info
+
+        if self._static:
+            return self._func(value, **kwargs)
+        raise NotImplementedError("Non static resolves are not supported yet")
 
     def __call__(self, getter: DjangoGetter) -> Any:
         kwargs = {}
@@ -168,10 +197,15 @@ class Resolver:
 @dataclass_transform(kw_only_default=True, field_specifiers=(Field,))
 class ResolverMetaclass(ModelMetaclass):
     _ninja_resolvers: Dict[str, Resolver]
+    _aliases: Dict[str, str]
 
     @no_type_check
     def __new__(cls, name, bases, namespace, **kwargs):
         resolvers = {}
+        aliases = {}
+        compatibility: Optional[bool] = namespace.get("_compatibility", None)
+        if compatibility is None:
+            compatibility = settings.COMPATIBILITY
 
         for base in reversed(bases):
             base_resolvers = getattr(base, "_ninja_resolvers", None)
@@ -188,10 +222,27 @@ class ResolverMetaclass(ModelMetaclass):
                 continue  # pragma: no cover
             resolvers[attr[8:]] = Resolver(resolve_func)
 
-        if resolvers:
-            namespace["__ninja_resolvers_validator"] = model_validator(mode="before")(
-                _validate_resolvers
-            )
+        # Check for string alias paths and register them
+        for field_name, field in namespace.items():
+            if not isinstance(field, FieldInfo):
+                continue
+            if (
+                isinstance(field.validation_alias, str)
+                and "." in field.validation_alias
+            ):
+                aliases[field_name] = field.validation_alias
+            elif isinstance(field.alias, str) and "." in field.alias:
+                aliases[field_name] = field.alias
+
+        if resolvers or aliases:
+            if compatibility:
+                namespace["__ninja_resolvers_validator"] = model_validator(
+                    mode="before"
+                )(_djangogetter_validator)
+            else:
+                namespace["__ninja_resolvers_validator"] = model_validator(
+                    mode="before"
+                )(_validate_resolvers)
 
         # Rewrite any annotations looking for collections to include the ManagerValidator
         for annotation_name, annotation in namespace.get("__annotations__", {}).items():
@@ -207,6 +258,7 @@ class ResolverMetaclass(ModelMetaclass):
 
         result = super().__new__(cls, name, bases, namespace, **kwargs)
         result._ninja_resolvers = resolvers
+        result._aliases = aliases
         return result
 
 
@@ -217,8 +269,38 @@ def _manager_to_queryset(value: Union[Manager, Any]) -> Union[QuerySet, Any]:
     return value
 
 
-def _validate_resolvers(cls: Type["Schema"], value: Any, info: ValidationInfo) -> Any:
+def _djangogetter_validator(
+    cls: Type["Schema"], value: Any, info: ValidationInfo
+) -> Any:
     return DjangoGetter(value, cls, info.context)
+
+
+def _validate_resolvers(cls: Type["Schema"], value: Any, info: ValidationInfo) -> Any:
+    wrapped = ObjectPatcher(value)
+
+    # Resolve path aliases
+    for key, path in cls._aliases.items():
+        # Don't apply alias if this is key of an attribute on this object
+        if hasattr(value, path):
+            continue
+
+        if hasattr(value, "__getitem__"):
+            try:
+                value.__getitem__(path)
+                continue
+            except KeyError:
+                pass
+
+        try:
+            wrapped[path] = Variable(path).resolve(value)
+        except VariableDoesNotExist as e:
+            raise AttributeError(key) from e
+
+    # Evaluate resolvers
+    for key, func in cls._ninja_resolvers.items():
+        wrapped[key] = func.run(value, info.context)
+
+    return wrapped
 
 
 class NinjaGenerateJsonSchema(GenerateJsonSchema):
@@ -245,6 +327,8 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
 
 
 class Schema(BaseModel, metaclass=ResolverMetaclass):
+    _compatibility: Optional[bool] = None
+
     class Config:
         from_attributes = True  # aka orm_mode
 
