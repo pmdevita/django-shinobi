@@ -37,12 +37,21 @@ jobs:
       - name: Install core
         run: pip install --pre "Django${{ matrix.django-version }}" "pydantic<3"
       - name: Install tests
-        run: pip install pytest pytest-asyncio pytest-django psycopg2-binary
+        run: pip install pytest pytest-asyncio pytest-django psycopg2-binary coverage pytest-cov
       - name: Test
-        run: pytest
+        run: COVERAGE_FILE=".coverage.${{ matrix.python-version }}.${{ matrix.django-version }}" pytest --cov=ninja --cov-fail-under=0
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: Test Results (Python ${{ matrix.python-version }} Django ${{ matrix.django-version }})
+          path: |
+            .coverage.*
 
   coverage:
     runs-on: ubuntu-latest
+    needs: test
     
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +63,21 @@ jobs:
         run: pip install flit
       - name: Install Dependencies
         run: flit install --symlink
-      - name: Test
-        run: pytest --cov=ninja
+      - name: Download Coverage Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Combine Coverage Artifacts
+        run: |
+          cp artifacts/*/.coverage.* .
+          coverage combine
+          coverage xml
+      - name: Coverage
+        uses: codecov/codecov-action@v5.3.1
+      - name: Check minimum coverage
+        run: |
+          coverage report --fail-under=100
+      
 
   codestyle:
     runs-on: ubuntu-latest
