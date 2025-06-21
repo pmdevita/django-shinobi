@@ -38,14 +38,21 @@ jobs:
         run: pip install --pre "Django${{ matrix.django-version }}" "pydantic<3"
       - name: Install tests
         run: pip install pytest pytest-asyncio pytest-django psycopg2-binary coverage pytest-cov
+      - name: Format test name
+        id: name
+        run: |
+          echo "name=py${{ matrix.python-version }}.dj${{ matrix.django-version }}" | sed -e "s/<//g" -e "s/>//g" >> "$GITHUB_OUTPUT"
+      - name: Echo test name
+        run: |
+          echo "${{ steps.name.outputs.name }}"
       - name: Test
-        run: COVERAGE_FILE=".coverage.${{ matrix.python-version }}.${{ matrix.django-version }}" pytest --cov=ninja --cov-fail-under=0
+        run: COVERAGE_FILE=".coverage.${{ steps.name.outputs.name }}" pytest --cov=ninja --cov-fail-under=0
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: Test Results (Python ${{ matrix.python-version }} Django ${{ matrix.django-version }})
+          name: Test Results (${{ steps.name.outputs.name }})
           path: |
             .coverage.*
 
