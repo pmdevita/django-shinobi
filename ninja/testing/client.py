@@ -141,6 +141,8 @@ class NinjaClientBase:
         request.user = Mock()
         if "user" not in request_params:
             request.user.is_authenticated = False
+            request.user.is_staff = False
+            request.user.is_superuser = False
 
         request.META = request_params.pop("META", {"REMOTE_ADDR": "127.0.0.1"})
         request.FILES = request_params.pop("FILES", {})
@@ -166,7 +168,18 @@ class NinjaClientBase:
         if "?" in path:
             request.GET = QueryDict(path.split("?")[1])
         else:
-            request.GET = QueryDict()
+            query_params = request_params.pop("query_params", None)
+            if query_params:
+                query_dict = QueryDict(mutable=True)
+                for k, v in query_params.items():
+                    if isinstance(v, list):
+                        for item in v:
+                            query_dict.appendlist(k, item)
+                    else:
+                        query_dict[k] = v
+                request.GET = query_dict
+            else:
+                request.GET = QueryDict()
 
         for k, v in request_params.items():
             setattr(request, k, v)
