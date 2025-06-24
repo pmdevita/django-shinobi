@@ -42,11 +42,8 @@ jobs:
         id: name
         run: |
           echo "name=py${{ matrix.python-version }}.dj${{ matrix.django-version }}" | sed -e "s/<//g" -e "s/>//g" >> "$GITHUB_OUTPUT"
-      - name: Echo test name
-        run: |
-          echo "${{ steps.name.outputs.name }}"
       - name: Test
-        run: COVERAGE_FILE=".coverage.${{ steps.name.outputs.name }}" pytest --cov=ninja --cov-fail-under=0
+        run: COVERAGE_FILE=".coverage.${{ steps.name.outputs.name }}" pytest --junit-xml="pytest-${{ steps.name.outputs.name }}}.xml" --cov=ninja --cov-fail-under=0
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,6 +51,7 @@ jobs:
           include-hidden-files: true
           name: Test Results (${{ steps.name.outputs.name }})
           path: |
+            pytest-*.xml
             .coverage.*
 
   coverage:
@@ -79,12 +77,24 @@ jobs:
           cp artifacts/*/.coverage.* .
           coverage combine
           coverage xml
-      - name: Coverage
-        uses: codecov/codecov-action@v5.3.1
+      - name: Pytest coverage comment
+        uses: orgoro/coverage@v3.2
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          coverageFile: coverage.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          thresholdAll: '1.0'
+          thresholdModified: '1.0'
+          thresholdNew: '1.0'
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          files: |
+            artifacts/**/*.xml
       - name: Check minimum coverage
         run: |
           coverage report --fail-under=100
-      
 
   codestyle:
     runs-on: ubuntu-latest
