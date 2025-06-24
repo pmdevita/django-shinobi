@@ -37,12 +37,26 @@ jobs:
       - name: Install core
         run: pip install --pre "Django${{ matrix.django-version }}" "pydantic<3"
       - name: Install tests
-        run: pip install pytest pytest-asyncio pytest-django psycopg2-binary
+        run: pip install pytest pytest-asyncio pytest-django psycopg2-binary coverage pytest-cov
+      - name: Format test name
+        id: name
+        run: |
+          echo "name=py${{ matrix.python-version }}.dj${{ matrix.django-version }}" | sed -e "s/<//g" -e "s/>//g" >> "$GITHUB_OUTPUT"
       - name: Test
-        run: pytest
+        run: COVERAGE_FILE=".coverage.${{ steps.name.outputs.name }}" pytest --junit-xml="pytest-${{ steps.name.outputs.name }}}.xml" --cov=ninja --cov-fail-under=0
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: Test Results (${{ steps.name.outputs.name }})
+          path: |
+            pytest-*.xml
+            .coverage.*
 
   coverage:
     runs-on: ubuntu-latest
+    needs: test
     
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +68,33 @@ jobs:
         run: pip install flit
       - name: Install Dependencies
         run: flit install --symlink
-      - name: Test
-        run: pytest --cov=ninja
+      - name: Download Coverage Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Combine Coverage Artifacts
+        run: |
+          cp artifacts/*/.coverage.* .
+          coverage combine
+          coverage xml
+      - name: Pytest coverage comment
+        uses: orgoro/coverage@v3.2
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          coverageFile: coverage.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          thresholdAll: '1.0'
+          thresholdModified: '1.0'
+          thresholdNew: '1.0'
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          files: |
+            artifacts/**/*.xml
+      - name: Check minimum coverage
+        run: |
+          coverage report --fail-under=100
 
   codestyle:
     runs-on: ubuntu-latest
