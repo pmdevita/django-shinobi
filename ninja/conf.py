@@ -24,6 +24,8 @@ class Settings(BaseModel):
         alias="NINJA_DEFAULT_THROTTLE_RATES",
     )
 
+    COMPATIBILITY: bool = Field(False, alias="NINJA_COMPATIBILITY")
+
     class Config:
         from_attributes = True
 

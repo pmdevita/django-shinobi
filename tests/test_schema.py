@@ -1,12 +1,14 @@
-from typing import List, Optional, Union
+from typing import ClassVar, List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
 from django.db.models import Manager, QuerySet
-from django.db.models.fields.files import ImageFieldFile
+from django.db.models.fields.files import FileField, ImageFieldFile
+from pydantic import AliasPath
 from pydantic_core import ValidationError
 
 from ninja import Schema
+from ninja.files import FileFieldType
 from ninja.schema import DjangoGetter, Field
 
 
@@ -42,10 +44,28 @@ class Boss:
     title = "CEO"
 
 
+class MockFile:
+    def __init__(self):
+        self.name = "asdf"
+
+
+class MockStorage:
+    def __init__(self):
+        pass
+
+    def url(self, name: str) -> str:
+        return name
+
+
+file_field = FileField(storage=MockStorage())
+null_file = ImageFieldFile(None, Mock(), name=None)
+non_null_file = ImageFieldFile(MockFile(), file_field, name="mockfile")
+
+
 class User:
     name = "John Smith"
     group_set = FakeManager([1, 2, 3])
-    avatar = ImageFieldFile(None, Mock(), name=None)
+    avatar = null_file
     boss: Optional[Boss] = Boss()
 
     @property
@@ -65,13 +85,23 @@ class UserSchema(Schema):
     name: str
     groups: List[int] = Field(..., alias="group_set")
     tags: List[TagSchema]
-    avatar: Optional[str] = None
+    avatar: Optional[FileFieldType] = None
 
 
 class UserWithBossSchema(UserSchema):
+    _compatibility = True
     boss: Optional[str] = Field(None, alias="boss.name")
     has_boss: bool
     boss_title: Optional[str] = Field(None, alias="get_boss_title")
+
+    @staticmethod
+    def resolve_has_boss(obj):
+        return bool(obj.boss)
+
+
+class NewUserWithBossSchema(UserSchema):
+    boss: Optional[str] = Field(None, alias="boss.name")
+    has_boss: bool
 
     @staticmethod
     def resolve_has_boss(obj):
@@ -90,6 +120,15 @@ class ResolveAttrSchema(Schema):
 
     id: str
     resolve_attr: str
+
+
+class ClassVarSchema(Schema):
+    value: ClassVar[list[int]]
+
+
+class FileSchema(Schema):
+    non_null_file: FileFieldType
+    null_file: Optional[FileFieldType]
 
 
 def test_schema():
@@ -143,6 +182,44 @@ def test_with_boss_schema():
         "avatar": None,
     }
 
+    user = User()
+    schema = NewUserWithBossSchema.from_orm(user)
+    assert schema.dict() == {
+        "name": "John Smith",
+        "boss": "Jane Jackson",
+        "has_boss": True,
+        "groups": [1, 2, 3],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
+        "avatar": None,
+    }
+
+
+def test_file_field_schema():
+    first = FileSchema(non_null_file=non_null_file, null_file=null_file)
+    assert first.non_null_file is not None and first.null_file is None
+
+    second = FileSchema(non_null_file=non_null_file, null_file=non_null_file)
+    assert second.non_null_file is not None and second.null_file is not None
+
+    with pytest.raises(ValidationError):
+        FileSchema(non_null_file=null_file, null_file=null_file)
+
+    fourth = FileSchema(non_null_file="asdf", null_file=None)
+    assert fourth.non_null_file == "asdf" and fourth.null_file is None
+
+    assert first.json_schema() == {
+        "properties": {
+            "non_null_file": {"title": "Non Null File", "type": "string"},
+            "null_file": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Null File",
+            },
+        },
+        "required": ["non_null_file", "null_file"],
+        "title": "FileSchema",
+        "type": "object",
+    }
+
 
 SKIP_NON_STATIC_RESOLVES = True
 
@@ -166,13 +243,14 @@ def test_with_initials_schema():
 def test_complex_alias_resolve():
     class Top:
         class Midddle:
+            @property
             def call(self):
                 return {"dict": [1, 10]}
 
         m = Midddle()
 
     class AliasSchema(Schema):
-        value: int = Field(..., alias="m.call.dict.1")
+        value: int = Field(..., validation_alias=AliasPath("m", "call", "dict", 1))
 
     x = Top()
 
