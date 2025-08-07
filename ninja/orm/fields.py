@@ -19,7 +19,9 @@ from django.db.models.fields import Field as DjangoField
 from pydantic import BaseModel, IPvAnyAddress
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, core_schema
+from typing_extensions import Literal
 
+from ninja.enum import NinjaChoicesList
 from ninja.errors import ConfigError
 from ninja.files import FileFieldType
 from ninja.openapi.schema import OpenAPISchema
@@ -186,6 +188,13 @@ def get_schema_field(
                 default_factory = field.default
             else:
                 default = field.default
+
+        if field.choices is not None:
+            if isinstance(field.choices, NinjaChoicesList):  # pragma: no cover
+                python_type = field.choices.enum
+            else:
+                choices = tuple(choice[0] for choice in field.choices)
+                python_type = Literal[choices]
 
     if default_factory:
         default = PydanticUndefined

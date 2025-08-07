@@ -1,12 +1,17 @@
+from sys import version_info
 from typing import List
 from unittest.mock import Mock
 
+import django
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
 from django.db.models import Manager
+from django.db.models.enums import TextChoices
+from pydantic import ValidationError
 from util import pydantic_arbitrary_dict_fix, pydantic_ref_fix
 
+from ninja.enum import ChoicesMixin
 from ninja.errors import ConfigError
 from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
@@ -246,6 +251,46 @@ def test_django_31_fields():
         "id": 1,
         "jsonfield": {"any": "data"},
         "positivebigintegerfield": 1,
+    }
+
+
+@pytest.mark.skipif(
+    django.VERSION[0] < 5 or version_info < (3, 11),
+    reason="Not supported on Django <5 and Python <3.11",
+)
+def test_choicesmixin_choices_field():
+    class TestEnum(ChoicesMixin, TextChoices):
+        ONE = "ONE", "One"
+        TWO = "TWO", "Two"
+        THREE = "THREE", "Three"
+
+    class EnumModel(models.Model):
+        number = models.CharField(max_length=10, choices=TestEnum)
+
+        class Meta:
+            app_label = "tests"
+
+    Schema = create_schema(EnumModel)
+
+    assert Schema.json_schema() == {
+        "$defs": {
+            "TestEnum": {
+                "enum": ["ONE", "TWO", "THREE"],
+                "title": "TestEnum",
+                "type": "string",
+            }
+        },
+        "properties": {
+            "id": {"title": "ID", "type": "integer"},
+            "number": {
+                "$ref": "#/$defs/TestEnum",
+                "maxLength": 10,
+                "title": "Number",
+            },
+        },
+        "required": ["id", "number"],
+        "title": "EnumModel",
+        "type": "object",
     }
 
 
@@ -617,3 +662,35 @@ def test_register_custom_field():
     Schema = create_schema(ModelWithCustomField)
     print(Schema.json_schema())
     assert Schema.json_schema()["properties"]["some_field"]["type"] == "integer"
+
+
+def test_model_field_choices():
+    class ChoiceModel(models.Model):
+        class Status(models.TextChoices):
+            DRAFT = "draft", "Draft"
+            PUBLISHED = "published", "Published"
+
+        status = models.CharField(
+            max_length=10, choices=Status.choices, default=Status.DRAFT
+        )
+        optional_status = models.CharField(
+            max_length=10, choices=Status.choices, null=True, blank=True
+        )
+
+        class Meta:
+            app_label = "tests"
+
+    Schema1 = create_schema(ChoiceModel, fields=["status", "optional_status"])
+
+    instance = Schema1(status="draft")
+    assert instance.status == "draft"
+
+    with pytest.raises(ValidationError):
+        Schema1(status="invalid_status")
+
+    instance = Schema1(status="draft", optional_status=None)
+    assert instance.optional_status is None
+
+    json_schema = Schema1.json_schema()
+    assert "enum" in json_schema["properties"]["status"]
+    assert json_schema["properties"]["status"]["enum"] == ["draft", "published"]
