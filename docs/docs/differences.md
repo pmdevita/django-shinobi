@@ -20,11 +20,11 @@ Most of the improvements are backwards-compatible, but the full improvements are
 custom `model_validator` or `field_validator`s. 
 
 Shinobi currently runs in compatibility mode by default and the full performance improvements are **opt-in**. You can 
-enable them by setting `NINJA_COMPATIBILITY_MODE` in your settings.py to False.
+enable them by setting `NINJA_COMPATIBILITY` in your settings.py to False.
 
 ```python
 # settings.py
-NINJA_COMPATIBILITY_MODE = False  # True by default
+NINJA_COMPATIBILITY = False  # True by default
 ```
 
 The performance improvements can also be set per Schema by setting `_compatibility` to `True` or `False`.
@@ -35,7 +35,7 @@ class MySchema(Schema):
     ...
 ```
 
-In 1.5.0, the default value for `NINJA_COMPATIBILITY_MODE` will be set to `True`, making the performance improvements 
+In 1.5.0, the default value for `NINJA_COMPATIBILITY` will be set to `True`, making the performance improvements 
 **opt-out**. The compatibility behavior will be removed in 1.6.0.
 
 ### Improved Choices Enum support
