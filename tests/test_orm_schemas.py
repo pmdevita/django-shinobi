@@ -9,12 +9,15 @@ from django.db import models
 from django.db.models import Manager
 from django.db.models.enums import TextChoices
 from pydantic import ValidationError
+from pydantic import __version__ as pydantic_version_str
 from util import pydantic_arbitrary_dict_fix, pydantic_ref_fix
 
 from ninja.enum import ChoicesMixin
 from ninja.errors import ConfigError
 from ninja.orm import create_schema, register_field
 from ninja.orm.shortcuts import L, S
+
+pydantic_version = [int(i) for i in pydantic_version_str.split(".")[:2]]
 
 
 def test_inheritance():
@@ -272,26 +275,43 @@ def test_choicesmixin_choices_field():
 
     Schema = create_schema(EnumModel)
 
-    assert Schema.json_schema() == {
-        "$defs": {
-            "TestEnum": {
-                "enum": ["ONE", "TWO", "THREE"],
-                "title": "TestEnum",
-                "type": "string",
-            }
-        },
-        "properties": {
-            "id": {"title": "ID", "type": "integer"},
-            "number": {
-                "$ref": "#/$defs/TestEnum",
-                "maxLength": 10,
-                "title": "Number",
+    # Pydantic >=2.10 or 2.5 because they pinned pydantic_core incorrectly in that version
+    if pydantic_version[1] >= 10 or pydantic_version[1] <= 6:
+        # Number also changes based on 2.5 or 2.10+
+        number = {"maxLength": 10, "title": "Number"}
+        if pydantic_version[1] <= 6:
+            number["allOf"] = [{"$ref": "#/$defs/TestEnum"}]
+        else:
+            number["$ref"] = "#/$defs/TestEnum"
+        assert Schema.json_schema() == {
+            "$defs": {
+                "TestEnum": {
+                    "enum": ["ONE", "TWO", "THREE"],
+                    "title": "TestEnum",
+                    "type": "string",
+                }
             },
-        },
-        "required": ["id", "number"],
-        "title": "EnumModel",
-        "type": "object",
-    }
+            "properties": {"id": {"title": "ID", "type": "integer"}, "number": number},
+            "required": ["id", "number"],
+            "title": "EnumModel",
+            "type": "object",
+        }
+    # Pydantic <2.10 did not support enums as schemas
+    else:
+        assert Schema.json_schema() == {
+            "properties": {
+                "id": {"title": "ID", "type": "integer"},
+                "number": {
+                    "enum": ["ONE", "TWO", "THREE"],
+                    "maxLength": 10,
+                    "title": "Number",
+                    "type": "string",
+                },
+            },
+            "required": ["id", "number"],
+            "title": "EnumModel",
+            "type": "object",
+        }
 
 
 def test_relational():
