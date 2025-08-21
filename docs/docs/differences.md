@@ -13,6 +13,31 @@ A write-up will be completed for them if Shinobi releases 1.4.0 before Ninja.
 
 ## Features
 
+### Schema Performance Improvements
+
+Shinobi significantly improves the performance of Schema, especially for handling large data payloads. 
+Most of the improvements are backwards-compatible, but the full improvements are backwards incompatible with 
+custom `model_validator` or `field_validator`s. 
+
+Shinobi currently runs in compatibility mode by default and the full performance improvements are **opt-in**. You can 
+enable them by setting `NINJA_COMPATIBILITY_MODE` in your settings.py to False.
+
+```python
+# settings.py
+NINJA_COMPATIBILITY_MODE = False  # True by default
+```
+
+The performance improvements can also be set per Schema by setting `_compatibility` to `True` or `False`.
+
+```python
+class MySchema(Schema):
+    _compatibility = True
+    ...
+```
+
+In 1.5.0, the default value for `NINJA_COMPATIBILITY_MODE` will be set to `True`, making the performance improvements 
+**opt-out**. The compatibility behavior will be removed in 1.6.0.
+
 ### Improved Choices Enum support
 
 [Choices and Enums](/django-shinobi/guides/response/django-pydantic/#choices-and-enums)

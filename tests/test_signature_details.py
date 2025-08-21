@@ -1,13 +1,12 @@
 import typing
 from sys import version_info
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, Union
 
 import pytest
 from pydantic import BeforeValidator
 
-from ninja.schema import is_collection_type as schema_is_collection_type
 from ninja.signature.details import is_collection_type
-from tests.test_schema import TagSchema, User
+from tests.test_schema import TagSchema
 
 
 @pytest.mark.parametrize(
@@ -19,6 +18,7 @@ from tests.test_schema import TagSchema, User
         pytest.param(set, True, id="true_for_native_set"),
         pytest.param(typing.Tuple, True, id="true_for_typing_Tuple"),
         pytest.param(tuple, True, id="true_for_native_tuple"),
+        pytest.param(int, False, id="false_for_int"),
         pytest.param(
             typing.Optional[typing.List[str]], True, id="true_for_optional_list"
         ),
@@ -35,6 +35,11 @@ from tests.test_schema import TagSchema, User
             False,
             id="false_for_instance_without_typing_origin",
         ),
+        pytest.param(Union[list, None], True),
+        pytest.param(Union[int, TagSchema], False),
+        pytest.param(Union[list, TagSchema], True),
+        pytest.param(Annotated[list, BeforeValidator(lambda x: x)], True),
+        pytest.param(Annotated[int, BeforeValidator(lambda x: x)], False),
         # Can't mark with `pytest.mark.skipif` since we'd attempt to instantiate the
         # parameterized value/type(e.g. `list[int]`). Which only works with Python >= 3.9)
         *(
@@ -53,21 +58,3 @@ from tests.test_schema import TagSchema, User
 )
 def test_is_collection_type_returns(annotation: typing.Any, expected: bool):
     assert is_collection_type(annotation) is expected
-
-
-def test_is_type_collection():
-    assert schema_is_collection_type(list) is True
-    assert schema_is_collection_type(set) is True
-    assert schema_is_collection_type(int) is False
-    assert schema_is_collection_type(Optional[list]) is True
-    assert schema_is_collection_type(Union[list, None]) is True
-    assert schema_is_collection_type(List[int]) is True
-    assert (
-        schema_is_collection_type(Annotated[list, BeforeValidator(lambda x: x)]) is True
-    )
-    assert (
-        schema_is_collection_type(Annotated[int, BeforeValidator(lambda x: x)]) is False
-    )
-    assert schema_is_collection_type(Union[int, TagSchema]) is False
-    assert schema_is_collection_type(Union[list, TagSchema]) is True
-    assert schema_is_collection_type(Union[int, User()]) is False

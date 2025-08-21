@@ -19,8 +19,6 @@ dotted attributes and resolver methods. For example::
 """
 
 import warnings
-from collections.abc import Collection
-from inspect import isclass
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, no_type_check
 
 import pydantic
@@ -37,12 +35,11 @@ from pydantic import (
 )
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.fields import FieldInfo
-from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from typing_extensions import dataclass_transform
 
 from ninja.conf import settings
-from ninja.signature.details import has_type, is_classvar_type
+from ninja.signature.details import is_classvar_type, is_collection_type
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
 
@@ -332,23 +329,6 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
     class Config:
         from_attributes = True  # aka orm_mode
 
-    # @model_validator(mode="wrap")
-    @classmethod
-    def _run_root_validator(
-        cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
-    ) -> Any:
-        # If Pydantic intends to validate against the __dict__ of the immediate Schema
-        # object, then we need to call `handler` directly on `values` before the conversion
-        # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
-        # will not persist to the original object.
-        forbids_extra = cls.model_config.get("extra") == "forbid"
-        should_validate_assignment = cls.model_config.get("validate_assignment", False)
-        if forbids_extra or should_validate_assignment:
-            handler(values)
-
-        values = DjangoGetter(values, cls, info.context)
-        return handler(values)
-
     @classmethod
     def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
         return cls.model_validate(obj, **kw)
@@ -369,21 +349,3 @@ class Schema(BaseModel, metaclass=ResolverMetaclass):
             stacklevel=2,
         )
         return cls.json_schema()
-
-
-def is_collection_type(type_annotation: Type) -> bool:
-    """
-    Is the given Type a Collection or a Sequence?
-    :param type_annotation:
-    :return: bool
-    """
-
-    def wrapper(t: Type) -> bool:
-        if isclass(t):
-            if t is str:
-                return False
-            return issubclass(t, Collection)
-        else:
-            return False
-
-    return has_type(type_annotation, wrapper)
