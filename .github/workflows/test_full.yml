@@ -11,23 +11,29 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
-        django-version: ['<3.2', '<3.3', '<4.2', '<4.3', '<5.1', '<5.2']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        django-version: ['4.2', '5.1', '5.2']
+        pydantic-version: ['2.5', '2.6', '2.7', '2.8', '2.9', '2.10', '2.11']
         exclude:
-          - python-version: '3.7'
-            django-version: '<5.1'
-          - python-version: '3.8'
-            django-version: '<5.1'
-          - python-version: '3.9'
-            django-version: '<5.1'
-          - python-version: '3.12'
-            django-version: '<3.2'
-          - python-version: '3.12'
-            django-version: '<3.3'
-          - python-version: '3.13'
-            django-version: '<3.2'
-          - python-version: '3.13'
-            django-version: '<3.3'
+          # Pydantic 2.5 supports 3.8-3.13
+          # Pydantic 2.11 supports 3.9-3.13
+          - pydantic-version: '2.11'
+            python-version: '3.8'
+          - pydantic-version: '2.5'
+            python-version: '3.13'
+          # Django 4.2 supports 3.8-3.12
+          - django-version: '4.2'
+            python-version: '3.13'
+          # Django 5.1 supports 3.10-3.13
+          - django-version: '5.1'
+            python-version: '3.8'
+          - django-version: '5.1'
+            python-version: '3.9'
+          # Django 5.2 supports 3.10-3.13
+          - django-version: '5.2'
+            python-version: '3.8'
+          - django-version: '5.2'
+            python-version: '3.9'
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -35,13 +41,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install core
-        run: pip install --pre "Django${{ matrix.django-version }}" "pydantic<3"
+        run: pip install --pre "Django~=${{ matrix.django-version }}".0 "pydantic~=${{ matrix.pydantic-version }}.0"
       - name: Install tests
         run: pip install pytest pytest-asyncio pytest-django psycopg2-binary coverage pytest-cov
       - name: Format test name
         id: name
         run: |
-          echo "name=py${{ matrix.python-version }}.dj${{ matrix.django-version }}" | sed -e "s/<//g" -e "s/>//g" >> "$GITHUB_OUTPUT"
+          echo "name=py${{ matrix.python-version }}.dj${{ matrix.django-version }}.pd${{ matrix.pydantic-version }}" | sed -e "s/<//g" -e "s/>//g" >> "$GITHUB_OUTPUT"
       - name: Test
         run: COVERAGE_FILE=".coverage.${{ steps.name.outputs.name }}" pytest --junit-xml="pytest-${{ steps.name.outputs.name }}}.xml" --cov=ninja --cov-fail-under=0
       - name: Upload Test Results
