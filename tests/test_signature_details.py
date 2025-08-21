@@ -1,9 +1,10 @@
 import typing
 from sys import version_info
-from typing import Annotated, Union
+from typing import Union
 
 import pytest
 from pydantic import BeforeValidator
+from typing_extensions import Annotated
 
 from ninja.signature.details import is_collection_type
 from tests.test_schema import TagSchema
