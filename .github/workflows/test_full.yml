@@ -89,6 +89,12 @@ jobs:
           cp artifacts/*/.coverage.* .
           coverage combine
           coverage xml --fail-under=0
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          files: |
+            artifacts/**/*.xml
       - name: Pytest coverage comment
         uses: orgoro/coverage@v3.2
         if: ${{ github.event_name == 'pull_request' }}
@@ -98,12 +104,6 @@ jobs:
           thresholdAll: '1.0'
           thresholdModified: '1.0'
           thresholdNew: '1.0'
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: ${{ github.event_name == 'pull_request' }}
-        with:
-          files: |
-            artifacts/**/*.xml
       - name: Check minimum coverage
         run: |
           coverage report --fail-under=100
