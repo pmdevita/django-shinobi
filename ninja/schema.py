@@ -35,6 +35,7 @@ from pydantic import (
 )
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.fields import FieldInfo
+from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from typing_extensions import dataclass_transform
 
@@ -161,7 +162,9 @@ class Resolver:
 
         if self._static:
             return self._func(value, **kwargs)
-        raise NotImplementedError("Non static resolves are not supported yet")
+        raise NotImplementedError(
+            "Non static resolves are not supported yet"
+        )  # pragma: no cover
 
     def __call__(self, getter: DjangoGetter) -> Any:
         kwargs = {}
@@ -223,35 +226,39 @@ class ResolverMetaclass(ModelMetaclass):
         for field_name, field in namespace.items():
             if not isinstance(field, FieldInfo):
                 continue
-            if (
-                isinstance(field.validation_alias, str)
-                and "." in field.validation_alias
-            ):
-                aliases[field_name] = field.validation_alias
-            elif isinstance(field.alias, str) and "." in field.alias:
-                aliases[field_name] = field.alias
+            alias = field.validation_alias or field.alias
+            if isinstance(alias, str) and "." in alias:
+                aliases[field_name] = alias
 
-        if resolvers or aliases:
+        # When the base Schema class is defined, do not attach
+        # resolver validators, otherwise subclasses won't be able to override them
+        if bases != (BaseModel,):
+            # Always attach DjangoGetter in compatibility mode
+            # in case the user attaches any model/field validators
             if compatibility:
-                namespace["__ninja_resolvers_validator"] = model_validator(
-                    mode="before"
-                )(_djangogetter_validator)
-            else:
-                namespace["__ninja_resolvers_validator"] = model_validator(
-                    mode="before"
-                )(_validate_resolvers)
-
-        # Rewrite any annotations looking for collections to include the ManagerValidator
-        for annotation_name, annotation in namespace.get("__annotations__", {}).items():
-            if annotation_name.startswith("_") or is_classvar_type(annotation):
-                continue
-            # Attach a validator to evaluate QuerySets for collection type fields
-            if is_collection_type(annotation):
-                namespace[f"__ninja_manager_validator_{annotation_name}"] = (
-                    field_validator(
-                        annotation_name, mode="before"
-                    )(_manager_to_queryset)
+                namespace["__ninja_resolvers_validator"] = model_validator(mode="wrap")(
+                    _run_root_validator
                 )
+            else:
+                # We only need to attach the full resolver validator if it's used
+                if resolvers or aliases:
+                    namespace["__ninja_resolvers_validator"] = model_validator(
+                        mode="before"
+                    )(_validate_resolvers)
+
+                # Rewrite any annotations looking for collections to include the ManagerValidator
+                for annotation_name, annotation in namespace.get(
+                    "__annotations__", {}
+                ).items():
+                    if annotation_name.startswith("_") or is_classvar_type(annotation):
+                        continue
+                    # Attach a validator to evaluate QuerySets for collection type fields
+                    if is_collection_type(annotation):
+                        namespace[f"__ninja_manager_validator_{annotation_name}"] = (
+                            field_validator(
+                                annotation_name, mode="before"
+                            )(_manager_to_queryset)
+                        )
 
         result = super().__new__(cls, name, bases, namespace, **kwargs)
         result._ninja_resolvers = resolvers
@@ -266,17 +273,11 @@ def _manager_to_queryset(value: Union[Manager, Any]) -> Union[QuerySet, Any]:
     return value
 
 
-def _djangogetter_validator(
-    cls: Type["Schema"], value: Any, info: ValidationInfo
-) -> Any:
-    return DjangoGetter(value, cls, info.context)
-
-
 def _validate_resolvers(cls: Type["Schema"], value: Any, info: ValidationInfo) -> Any:
     wrapped = ObjectPatcher(value)
 
     # Resolve path aliases
-    for key, path in cls._aliases.items():
+    for path in cls._aliases.values():
         # Don't apply alias if this is key of an attribute on this object
         if hasattr(value, path):
             continue
@@ -290,14 +291,33 @@ def _validate_resolvers(cls: Type["Schema"], value: Any, info: ValidationInfo) -
 
         try:
             wrapped[path] = Variable(path).resolve(value)
-        except VariableDoesNotExist as e:
-            raise AttributeError(key) from e
+        except VariableDoesNotExist:
+            pass
 
     # Evaluate resolvers
     for key, func in cls._ninja_resolvers.items():
         wrapped[key] = func.run(value, info.context)
 
     return wrapped
+
+
+def _run_root_validator(
+    cls: Any,
+    values: Any,
+    handler: ModelWrapValidatorHandler[S],
+    info: ValidationInfo,
+) -> Any:
+    # If Pydantic intends to validate against the __dict__ of the immediate Schema
+    # object, then we need to call `handler` directly on `values` before the conversion
+    # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
+    # will not persist to the original object.
+    forbids_extra = cls.model_config.get("extra") == "forbid"
+    should_validate_assignment = cls.model_config.get("validate_assignment", False)
+    if forbids_extra or should_validate_assignment:
+        handler(values)
+
+    values = DjangoGetter(values, cls, info.context)
+    return handler(values)
 
 
 class NinjaGenerateJsonSchema(GenerateJsonSchema):

@@ -62,7 +62,9 @@ class _FileFieldType:
             if (
                 len(_handler._generate_schema.model_type_stack._stack) != 1  # type: ignore[attr-defined]
             ):
-                raise Exception("Not sure what to do here")
+                raise Exception(
+                    "Unexpected issue creating a schema with a FileField. Please open an issue on Django Shinobi."
+                )  # pragma: no cover
 
             file_field_schema: Union[BeforeValidatorFunctionSchema, ChainSchema] = (
                 core_schema.chain_schema([

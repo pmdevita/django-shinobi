@@ -391,7 +391,7 @@ def has_type(type_annotation: Type, f: Callable[[Type], bool]) -> bool:
         for a in args:
             # Optional type hint, isn't required
             if a is None:
-                continue
+                continue  # pragma: no cover
 
             new_args.append(a)
 
