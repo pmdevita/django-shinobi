@@ -17,7 +17,7 @@ A write-up will be completed for them if Shinobi releases 1.4.0 before Ninja.
 
 Shinobi significantly improves the performance of Schema, especially for handling large data payloads. 
 Most of the improvements are backwards-compatible, but the full improvements are backwards incompatible with 
-custom `model_validator` or `field_validator`s. 
+custom `model_validator` or `field_validator`s.
 
 Shinobi currently runs in compatibility mode by default and the full performance improvements are **opt-in**. You can 
 enable them by setting `NINJA_COMPATIBILITY` in your settings.py to False.
@@ -127,3 +127,10 @@ such as `toCamel`, Pydantic will not rewrite the alias for the foreign key field
 
 Shinobi adds a `@property` field to the Schema so that the normal name can be accessed without 
 using Pydantic's aliases, freeing it to be used for other manual or automatically generated aliases.
+
+
+### FileFields now properly validate when non-null
+
+Previously, while FileField and ImageField could show a non-null type, they would always accept 
+null. This is fixed with the schema improvements and requires Pydantic 2.7. Pydantic 2.6 and 
+older now always show the field as nullable, so upgrading is recommended.

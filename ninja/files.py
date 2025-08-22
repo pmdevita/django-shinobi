@@ -55,26 +55,35 @@ class _FileFieldType:
     ) -> core_schema.CoreSchema:
         from ninja.signature.details import is_optional
 
-        # Introspect the field using this type to determine if it's supposed to be optional
-        # TODO: Make a test that creates a stack > 1
-        if (
-            len(_handler._generate_schema.model_type_stack._stack) != 1  # type: ignore[attr-defined]
-        ):
-            raise Exception("Not sure what to do here")
+        # Deprecate: Pydantic 2.6-2.7 do not support model_type_stack
+        if hasattr(_handler._generate_schema, "model_type_stack"):  # type: ignore[attr-defined]
+            # Introspect the field using this type to determine if it's supposed to be optional
+            # TODO: Make a test that creates a stack > 1
+            if (
+                len(_handler._generate_schema.model_type_stack._stack) != 1  # type: ignore[attr-defined]
+            ):
+                raise Exception("Not sure what to do here")
 
-        file_field_schema: Union[BeforeValidatorFunctionSchema, ChainSchema] = (
-            core_schema.chain_schema([
-                core_schema.with_info_before_validator_function(
-                    validate_file_field, core_schema.str_schema()
-                ),
-                core_schema.str_schema(),
-            ])
-        )
+            file_field_schema: Union[BeforeValidatorFunctionSchema, ChainSchema] = (
+                core_schema.chain_schema([
+                    core_schema.with_info_before_validator_function(
+                        validate_file_field, core_schema.str_schema()
+                    ),
+                    core_schema.str_schema(),
+                ])
+            )
 
-        field = _handler._generate_schema.model_type_stack._stack[  # type: ignore[attr-defined]
-            0
-        ].model_fields[_handler.field_name]
-        if is_optional(field.annotation):
+            field = _handler._generate_schema.model_type_stack._stack[  # type: ignore[attr-defined]
+                0
+            ].model_fields[_handler.field_name]
+
+            optional = is_optional(field.annotation)
+        else:
+            # Older versions of Pydantic do not return this info
+            # Set optional to True just in case (this was the old behavior anyways)
+            optional = True
+
+        if optional:
             field_type = core_schema.union_schema([
                 core_schema.str_schema(),
                 core_schema.none_schema(),

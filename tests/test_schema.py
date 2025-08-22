@@ -5,11 +5,14 @@ import pytest
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FileField, ImageFieldFile
 from pydantic import AliasPath
+from pydantic import __version__ as pydantic_version_str
 from pydantic_core import ValidationError
 
 from ninja import Schema
 from ninja.files import FileFieldType
 from ninja.schema import DjangoGetter, Field
+
+pydantic_version = [int(i) for i in pydantic_version_str.split(".")[:2]]
 
 
 class FakeManager(Manager):
@@ -123,7 +126,7 @@ class ResolveAttrSchema(Schema):
 
 
 class ClassVarSchema(Schema):
-    value: ClassVar[list[int]]
+    value: ClassVar[List[int]]
 
 
 class FileSchema(Schema):
@@ -201,13 +204,15 @@ def test_file_field_schema():
     second = FileSchema(non_null_file=non_null_file, null_file=non_null_file)
     assert second.non_null_file is not None and second.null_file is not None
 
-    with pytest.raises(ValidationError):
-        FileSchema(non_null_file=null_file, null_file=null_file)
+    # FileField validation only works on Pydantic 2.7+
+    if pydantic_version[1] >= 7:
+        with pytest.raises(ValidationError):
+            FileSchema(non_null_file=null_file, null_file=null_file)
 
     fourth = FileSchema(non_null_file="asdf", null_file=None)
     assert fourth.non_null_file == "asdf" and fourth.null_file is None
 
-    assert first.json_schema() == {
+    data = {
         "properties": {
             "non_null_file": {"title": "Non Null File", "type": "string"},
             "null_file": {
@@ -219,6 +224,14 @@ def test_file_field_schema():
         "title": "FileSchema",
         "type": "object",
     }
+    if pydantic_version[1] <= 6:
+        data["properties"]["non_null_file"]["anyOf"] = [
+            {"type": "string"},
+            {"type": "null"},
+        ]
+        data["properties"]["non_null_file"].pop("type")
+
+    assert first.json_schema() == data
 
 
 SKIP_NON_STATIC_RESOLVES = True
