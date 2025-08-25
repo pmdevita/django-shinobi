@@ -1,3 +1,5 @@
+import pytest
+
 from ninja import NinjaAPI, Schema
 from ninja.testing import TestClient
 
@@ -12,6 +14,15 @@ class ResolveWithKWargs(Schema):
 
 
 class ResolveWithContext(Schema):
+    value: int
+
+    @staticmethod
+    def resolve_value(obj, context):
+        return obj["value"] + context["extra"]
+
+
+class NewResolveWithContext(Schema):
+    _compatibility = False
     value: int
 
     @staticmethod
@@ -42,14 +53,17 @@ def resolve_ctx(request, data: DataWithRequestContext):
 client = TestClient(api)
 
 
-def test_schema_with_context():
+def test_schema_with_kwargs():
     obj = ResolveWithKWargs.model_validate({"value": 10}, context={"extra": 10})
     assert obj.value == 20
 
-    obj = ResolveWithContext.model_validate({"value": 2}, context={"extra": 2})
+
+@pytest.mark.parametrize(["Schema"], [[ResolveWithContext], [NewResolveWithContext]])
+def test_schema_with_context(Schema):
+    obj = Schema.model_validate({"value": 2}, context={"extra": 2})
     assert obj.value == 4
 
-    obj = ResolveWithContext.from_orm({"value": 2}, context={"extra": 2})
+    obj = Schema.from_orm({"value": 2}, context={"extra": 2})
     assert obj.value == 4
 
 

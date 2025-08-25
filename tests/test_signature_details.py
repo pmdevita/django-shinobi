@@ -1,9 +1,13 @@
 import typing
 from sys import version_info
+from typing import Union
 
 import pytest
+from pydantic import BeforeValidator
+from typing_extensions import Annotated
 
 from ninja.signature.details import is_collection_type
+from tests.test_schema import TagSchema
 
 
 @pytest.mark.parametrize(
@@ -15,6 +19,7 @@ from ninja.signature.details import is_collection_type
         pytest.param(set, True, id="true_for_native_set"),
         pytest.param(typing.Tuple, True, id="true_for_typing_Tuple"),
         pytest.param(tuple, True, id="true_for_native_tuple"),
+        pytest.param(int, False, id="false_for_int"),
         pytest.param(
             typing.Optional[typing.List[str]], True, id="true_for_optional_list"
         ),
@@ -31,6 +36,11 @@ from ninja.signature.details import is_collection_type
             False,
             id="false_for_instance_without_typing_origin",
         ),
+        pytest.param(Union[list, None], True),
+        pytest.param(Union[int, TagSchema], False),
+        pytest.param(Union[list, TagSchema], True),
+        pytest.param(Annotated[list, BeforeValidator(lambda x: x)], True),
+        pytest.param(Annotated[int, BeforeValidator(lambda x: x)], False),
         # Can't mark with `pytest.mark.skipif` since we'd attempt to instantiate the
         # parameterized value/type(e.g. `list[int]`). Which only works with Python >= 3.9)
         *(

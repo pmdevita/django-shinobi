@@ -1,13 +1,18 @@
-from typing import List, Optional, Union
+from typing import ClassVar, List, Optional, Union
 from unittest.mock import Mock
 
 import pytest
 from django.db.models import Manager, QuerySet
-from django.db.models.fields.files import ImageFieldFile
+from django.db.models.fields.files import FileField, ImageFieldFile
+from pydantic import AliasPath
+from pydantic import __version__ as pydantic_version_str
 from pydantic_core import ValidationError
 
 from ninja import Schema
-from ninja.schema import DjangoGetter, Field
+from ninja.files import FileFieldType
+from ninja.schema import DjangoGetter, Field, ObjectPatcher
+
+pydantic_version = [int(i) for i in pydantic_version_str.split(".")[:2]]
 
 
 class FakeManager(Manager):
@@ -42,10 +47,28 @@ class Boss:
     title = "CEO"
 
 
+class MockFile:
+    def __init__(self):
+        self.name = "asdf"
+
+
+class MockStorage:
+    def __init__(self):
+        pass
+
+    def url(self, name: str) -> str:
+        return name
+
+
+file_field = FileField(storage=MockStorage())
+null_file = ImageFieldFile(None, Mock(), name=None)
+non_null_file = ImageFieldFile(MockFile(), file_field, name="mockfile")
+
+
 class User:
     name = "John Smith"
     group_set = FakeManager([1, 2, 3])
-    avatar = ImageFieldFile(None, Mock(), name=None)
+    avatar = null_file
     boss: Optional[Boss] = Boss()
 
     @property
@@ -65,10 +88,21 @@ class UserSchema(Schema):
     name: str
     groups: List[int] = Field(..., alias="group_set")
     tags: List[TagSchema]
-    avatar: Optional[str] = None
+    avatar: Optional[FileFieldType] = None
+
+
+# Tests for new schema without resolvers or aliases
+class NewUserSchema(Schema):
+    _compatibility = False
+    _class_var: bool = False  # Tests ClassVar skipping on Manager validation attachment
+    name: str
+    groups: List[int] = Field(..., alias="group_set")
+    tags: List[TagSchema]
+    avatar: Optional[FileFieldType] = None
 
 
 class UserWithBossSchema(UserSchema):
+    _compatibility = True
     boss: Optional[str] = Field(None, alias="boss.name")
     has_boss: bool
     boss_title: Optional[str] = Field(None, alias="get_boss_title")
@@ -76,6 +110,21 @@ class UserWithBossSchema(UserSchema):
     @staticmethod
     def resolve_has_boss(obj):
         return bool(obj.boss)
+
+
+class NewUserWithBossSchema(NewUserSchema):
+    _compatibility = False
+    boss: Optional[str] = Field(None, alias="boss.name")
+    has_boss: bool
+    boss_title: Optional[str] = Field(None)
+
+    @staticmethod
+    def resolve_has_boss(obj):
+        return bool(obj.boss)
+
+    @staticmethod
+    def resolve_boss_title(obj):
+        return obj.get_boss_title()
 
 
 class UserWithInitialsSchema(UserWithBossSchema):
@@ -90,6 +139,21 @@ class ResolveAttrSchema(Schema):
 
     id: str
     resolve_attr: str
+
+
+class ClassVarSchema(Schema):
+    value: ClassVar[List[int]]
+
+
+class CompatibleFileSchema(Schema):
+    non_null_file: FileFieldType
+    null_file: Optional[FileFieldType]
+
+
+class NewFileSchema(Schema):
+    _compatibility = False
+    non_null_file: FileFieldType
+    null_file: Optional[FileFieldType]
 
 
 def test_schema():
@@ -117,9 +181,10 @@ def test_schema_with_image():
     }
 
 
-def test_with_boss_schema():
+@pytest.mark.parametrize(["Schema"], [[UserWithBossSchema], [NewUserWithBossSchema]])
+def test_with_boss_schema(Schema):
     user = User()
-    schema = UserWithBossSchema.from_orm(user)
+    schema = Schema.from_orm(user)
     assert schema.dict() == {
         "name": "John Smith",
         "boss": "Jane Jackson",
@@ -132,7 +197,7 @@ def test_with_boss_schema():
 
     user_without_boss = User()
     user_without_boss.boss = None
-    schema = UserWithBossSchema.from_orm(user_without_boss)
+    schema = Schema.from_orm(user_without_boss)
     assert schema.dict() == {
         "name": "John Smith",
         "boss": None,
@@ -142,6 +207,56 @@ def test_with_boss_schema():
         "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
         "avatar": None,
     }
+
+    user = User()
+    schema = Schema.from_orm(user)
+    assert schema.dict() == {
+        "name": "John Smith",
+        "boss": "Jane Jackson",
+        "boss_title": "CEO",
+        "has_boss": True,
+        "groups": [1, 2, 3],
+        "tags": [{"id": 1, "title": "foo"}, {"id": 2, "title": "bar"}],
+        "avatar": None,
+    }
+
+
+@pytest.mark.parametrize(["schema"], [[CompatibleFileSchema], [NewFileSchema]])
+def test_file_field_schema(schema):
+    first = schema(non_null_file=non_null_file, null_file=null_file)
+    assert first.non_null_file is not None and first.null_file is None
+
+    second = schema(non_null_file=non_null_file, null_file=non_null_file)
+    assert second.non_null_file is not None and second.null_file is not None
+
+    # FileField validation only works on Pydantic 2.7+
+    if pydantic_version[1] >= 7:
+        with pytest.raises(ValidationError):
+            schema(non_null_file=null_file, null_file=null_file)
+
+    fourth = schema(non_null_file="asdf", null_file=None)
+    assert fourth.non_null_file == "asdf" and fourth.null_file is None
+
+    data = {
+        "properties": {
+            "non_null_file": {"title": "Non Null File", "type": "string"},
+            "null_file": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "title": "Null File",
+            },
+        },
+        "required": ["non_null_file", "null_file"],
+        "title": schema.__name__,
+        "type": "object",
+    }
+    if pydantic_version[1] <= 6:
+        data["properties"]["non_null_file"]["anyOf"] = [
+            {"type": "string"},
+            {"type": "null"},
+        ]
+        data["properties"]["non_null_file"].pop("type")
+
+    assert first.json_schema() == data
 
 
 SKIP_NON_STATIC_RESOLVES = True
@@ -163,16 +278,58 @@ def test_with_initials_schema():
     }
 
 
-def test_complex_alias_resolve():
+@pytest.mark.parametrize(
+    ["compatibility", "alias_type"],
+    [
+        [True, "validation_alias"],
+        [False, "validation_alias"],
+        [True, "alias"],
+        [False, "alias"],
+    ],
+)
+def test_complex_template_alias_resolve(compatibility, alias_type):
     class Top:
         class Midddle:
+            @property
+            def call(self):
+                return {"dict": [1, 10]}
+
+        m = Midddle()
+
+    two = {"m.call.dict.1": 10}
+
+    class Three:
+        pass
+
+    three = Three()
+    setattr(three, "m.call.dict.1", 10)
+
+    four = {"another_value": 10}
+
+    x = Top()
+
+    class AliasSchema(Schema):
+        _compatibility = compatibility
+        value: int = Field(..., **{alias_type: "m.call.dict.1"})
+
+    assert AliasSchema.from_orm(x).dict() == {"value": 10}
+    assert AliasSchema.from_orm(two).dict() == {"value": 10}
+    assert AliasSchema.from_orm(three).dict() == {"value": 10}
+    with pytest.raises(ValidationError):
+        AliasSchema.from_orm(four)
+
+
+def test_complex_aliaspath_resolve():
+    class Top:
+        class Midddle:
+            @property
             def call(self):
                 return {"dict": [1, 10]}
 
         m = Midddle()
 
     class AliasSchema(Schema):
-        value: int = Field(..., alias="m.call.dict.1")
+        value: int = Field(..., validation_alias=AliasPath("m", "call", "dict", 1))
 
     x = Top()
 
@@ -195,6 +352,14 @@ def test_django_getter():
 
     dg = DjangoGetter({"i": 1}, Somechema)
     assert repr(dg) == "<DjangoGetter: {'i': 1}>"
+
+
+def test_object_patcher():
+    """Coverage for ObjectPatcher __repr__ method"""
+
+    op = ObjectPatcher({"i": 1})
+    op["i"] = 5
+    assert repr(op) == "<ObjectPatcher: {'i': 1} + {'i': 5}>"
 
 
 def test_schema_validates_assignment_and_reassigns_the_value():

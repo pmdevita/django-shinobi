@@ -23,6 +23,7 @@ from typing_extensions import Literal
 
 from ninja.enum import NinjaChoicesList
 from ninja.errors import ConfigError
+from ninja.files import FileFieldType
 from ninja.openapi.schema import OpenAPISchema
 from ninja.types import DictStrAny
 
@@ -67,12 +68,13 @@ TYPES = {
     "DateTimeField": datetime.datetime,
     "DecimalField": Decimal,
     "DurationField": datetime.timedelta,
-    "FileField": str,
+    "FileField": FileFieldType,
     "FilePathField": str,
     "FloatField": float,
     "GenericIPAddressField": IPvAnyAddress,
     "IPAddressField": IPvAnyAddress,
     "IntegerField": int,
+    "ImageField": FileFieldType,
     "JSONField": AnyObject,
     "NullBooleanField": bool,
     "PositiveBigIntegerField": int,

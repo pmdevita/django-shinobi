@@ -29,6 +29,8 @@ class Settings(BaseModel):
         {"PUT", "PATCH", "DELETE"}, alias="NINJA_FIX_REQUEST_FILES_METHODS"
     )
 
+    COMPATIBILITY: bool = Field(True, alias="NINJA_COMPATIBILITY")
+
     class Config:
         from_attributes = True
 
