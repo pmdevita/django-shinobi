@@ -16,18 +16,21 @@ A write-up will be completed for them if Shinobi releases 1.4.0 before Ninja.
 ### Schema Performance Improvements
 
 Shinobi significantly improves the performance of Schema, especially for handling large data payloads. 
-Most of the improvements are backwards-compatible, but the full improvements are backwards incompatible with 
-custom `model_validator` or `field_validator`s.
+These improvements are not backwards compatible. Depending on the project, 
+they may work without any changes to your code, but you may need to make changes for 
+custom `model_validator` or `field_validator`s. There may also be issues with FileFields on Pydantic 2.6 
+and older, so upgrading is recommended.
 
-Shinobi currently runs in compatibility mode by default and the full performance improvements are **opt-in**. You can 
-enable them by setting `NINJA_COMPATIBILITY` in your settings.py to False.
+Shinobi has a compatibility mode to retain support for the old Schema behavior. This compatibility mode is 
+enabled by default in 1.4.0 to help ease the migration, and the full performance improvements are currently **opt-in**. 
+You can enable them by setting `NINJA_COMPATIBILITY` in your settings.py to False.
 
 ```python
 # settings.py
 NINJA_COMPATIBILITY = False  # True by default
 ```
 
-The performance improvements can also be set per Schema by setting `_compatibility` to `True` or `False`.
+The performance improvements can also be configured per Schema by setting `_compatibility` to `True` or `False`.
 
 ```python
 class MySchema(Schema):
@@ -132,5 +135,6 @@ using Pydantic's aliases, freeing it to be used for other manual or automaticall
 ### FileFields now properly validate when non-null
 
 Previously, while FileField and ImageField could show a non-null type, they would always accept 
-null. This is fixed with the schema improvements and requires Pydantic 2.7. Pydantic 2.6 and 
-older now always show the field as nullable, so upgrading is recommended.
+null. This is fixed with the schema improvements and requires Pydantic 2.7.
+Fixing this created a regression where Pydantic 2.6 and older 
+always show the field as nullable, so upgrading is recommended.
