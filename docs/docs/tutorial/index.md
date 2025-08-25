@@ -23,6 +23,15 @@ Start a new Django project (or if you already have an existing Django project, s
 django-admin startproject myproject
 ```
 
+If you're starting a new project, it's recommended to set `NINJA_COMPATIBILITY` to `False` to get the 
+performance improvements.
+
+```python
+# myproject/settings.py
+
+NINJA_COMPATIBILITY = False
+```
+
 ## Create the API
 
 Let's create a module for our API. Create an `api.py` file in the same directory location as your Django project's root `urls.py`:

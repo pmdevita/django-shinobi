@@ -2,7 +2,7 @@
 
 ## Define a response Schema
 
-**Django Ninja** allows you to define the schema of your responses both for validation and documentation purposes.
+**Django Shinobi** allows you to define the schema of your responses both for validation and documentation purposes.
 
 We'll create a third operation that will return information about the current Django user.
 

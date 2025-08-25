@@ -6,10 +6,10 @@ and new features.
 
 ## Ninja 1.4.0 changes
 
-At the time of writing, Shinobi includes development changes to Ninja that 
-have not yet been released on Ninja. You can read the list of them them on the 
-[1.4.0a release notes](https://github.com/pmdevita/django-shinobi/releases/tag/v1.4.0a).
-A write-up will be completed for them if Shinobi releases 1.4.0 before Ninja.
+Shinobi 1.4.0 is based on Ninja 1.4.1. You can read the changes for Ninja here.
+
+- [Ninja 1.4.0](https://github.com/vitalik/django-ninja/releases/tag/v1.4.0)
+- [Ninja 1.4.1](https://github.com/vitalik/django-ninja/releases/tag/v1.4.1)
 
 ## Features
 
@@ -102,3 +102,24 @@ such as `toCamel`, Pydantic will not rewrite the alias for the foreign key field
 
 Shinobi adds a `@property` field to the Schema so that the normal name can be accessed without 
 using Pydantic's aliases, freeing it to be used for other manual or automatically generated aliases.
+
+
+## Build and CI Changes
+
+### Better version compatibility
+
+Shinobi now restricts versions of Pydantic to known tested and compatible ones. This should 
+prevent surprise updates to Pydantic from breaking Shinobi.
+
+### Improved CI testing
+
+Previously, Ninja would only run tests against one specific version of Python, Django, and Pydantic. 
+Consequentially, in order to hit 100% test coverage, many branches and lines had to be excluded from the 
+coverage total, which also meant we didn't really have the full picture of line coverage. 
+
+Shinobi now tests against every supported combination of Python, Django, and Pydantic, and combines 
+the coverage from them to account for version-specific code. If you're contributing to Shinobi and 
+open a PR, you'll now also receive a comment detailing which tests passed and failed, and which lines 
+are still missing in coverage. 
+
+These changes should make contributing easier and improve the awareness of our testing.
