@@ -82,7 +82,7 @@ class _FileFieldType:
             optional = is_optional(field.annotation)
         else:
             # Older versions of Pydantic do not return this info
-            # Set optional to True just in case (this was the old behavior anyways)
+            # Set optional to True just in case (this was the old behavior anyway, we're just being more honest now)
             optional = True
 
         if optional:

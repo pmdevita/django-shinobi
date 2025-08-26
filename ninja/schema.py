@@ -230,7 +230,7 @@ class ResolverMetaclass(ModelMetaclass):
             if isinstance(alias, str) and "." in alias:
                 aliases[field_name] = alias
 
-        # When the base Schema class is defined, do not attach
+        # When the base Schema class is being created, do not attach
         # resolver validators, otherwise subclasses won't be able to override them
         if bases != (BaseModel,):
             # Always attach DjangoGetter in compatibility mode
@@ -266,7 +266,6 @@ class ResolverMetaclass(ModelMetaclass):
         return result
 
 
-# If encountered, evaluates a Manager into a QuerySet
 def _manager_to_queryset(value: Union[Manager, Any]) -> Union[QuerySet, Any]:
     if isinstance(value, Manager):
         return value.all()
@@ -278,7 +277,7 @@ def _validate_resolvers(cls: Type["Schema"], value: Any, info: ValidationInfo) -
 
     # Resolve path aliases
     for path in cls._aliases.values():
-        # Don't apply alias if this is key of an attribute on this object
+        # Don't apply alias if this is a key of an attribute on this object
         if hasattr(value, path):
             continue
 

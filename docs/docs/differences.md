@@ -16,7 +16,7 @@ A write-up will be completed for them if Shinobi releases 1.4.0 before Ninja.
 ### Schema Performance Improvements
 
 Shinobi significantly improves the performance of Schema, especially for handling large data payloads. 
-These improvements are not backwards compatible. Depending on the project, 
+These improvements are not fully backwards compatible. Depending on the project, 
 they may work without any changes to your code, but you may need to make changes for 
 custom `model_validator` or `field_validator`s. There may also be issues with FileFields on Pydantic 2.6 
 and older, so upgrading is recommended.
