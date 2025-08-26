@@ -62,7 +62,8 @@ class SchemaFactory:
 
         definitions = {}
         for fld in model_fields_list:
-            field_name, python_type, field_info = get_schema_field(
+            # Mypy is very confused about get_schema_field
+            field_name, python_type, field_info = get_schema_field(  # type: ignore[no-untyped-call, unused-ignore]
                 fld,
                 depth=depth,
                 optional=optional_fields and (fld.name in optional_fields),

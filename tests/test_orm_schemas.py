@@ -91,7 +91,7 @@ def test_all_fields():
 
     SchemaCls = create_schema(AllFields)
     # print(SchemaCls.json_schema())
-    assert SchemaCls.json_schema() == {
+    data = {
         "title": "AllFields",
         "type": "object",
         "properties": {
@@ -202,6 +202,20 @@ def test_all_fields():
             "hstorefield",
         ],
     }
+
+    if pydantic_version[1] <= 6:
+        data["properties"]["filefield"]["anyOf"] = [
+            {"type": "string"},
+            {"type": "null"},
+        ]
+        data["properties"]["imagefield"]["anyOf"] = [
+            {"type": "string"},
+            {"type": "null"},
+        ]
+        data["properties"]["filefield"].pop("type")
+        data["properties"]["imagefield"].pop("type")
+
+    assert SchemaCls.json_schema() == data
 
 
 @pytest.mark.parametrize(

@@ -1,13 +1,23 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+)
 
 import pydantic
 from django.http import HttpResponse
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from typing_extensions import Annotated, get_args, get_origin
+from typing_extensions import Annotated, _AnnotatedAlias, get_args, get_origin
 
 from ninja import UploadedFile
 from ninja.compatibility.util import UNION_TYPES
@@ -301,24 +311,16 @@ def is_pydantic_model(cls: Any) -> bool:
         return False
 
 
-def is_collection_type(annotation: Any) -> bool:
-    origin = get_origin(annotation)
-
-    if origin in UNION_TYPES:
-        for arg in get_args(annotation):
-            if is_collection_type(arg):
-                return True
-        return False
-
-    collection_types = (List, list, set, tuple)
-    if origin is None:
+def is_collection_type(type_annotation: Type) -> bool:
+    def wrapper(t: Type) -> bool:
+        collection_types = (List, list, set, tuple)
         return (
-            isinstance(annotation, collection_types)
-            if not isinstance(annotation, type)
-            else issubclass(annotation, collection_types)
+            isinstance(t, collection_types)
+            if not isinstance(t, type)
+            else issubclass(t, collection_types)
         )
-    else:
-        return origin in collection_types  # TODO: I guess we should handle only list
+
+    return has_type(type_annotation, wrapper)
 
 
 def detect_collection_fields(
@@ -357,3 +359,50 @@ def detect_collection_fields(
             if is_collection_type(annotation_or_field):
                 result.append(path[-1])
     return result
+
+
+def is_optional(type_annotation: Type) -> bool:
+    def wrapper(t: Type) -> bool:
+        # NoneType
+        return t is None or t is type(None)
+
+    return has_type(type_annotation, wrapper)
+
+
+def is_classvar_type(type_annotation: Type) -> bool:
+    def wrapper(t: Type) -> bool:
+        return t is ClassVar
+
+    return has_type(type_annotation, wrapper)
+
+
+def has_type(type_annotation: Type, f: Callable[[Type], bool]) -> bool:
+    # Unwrap any type aliases (List, Set, etc.)
+    origin = get_origin(type_annotation)
+    if origin is not None and f(origin):
+        return True
+
+    # Try to decompose the type
+    args = get_args(type_annotation)
+
+    # Type can't be decomposed further, check the annotation itself
+    if len(args) == 0:
+        return f(type_annotation)
+
+    # Annotations should only have their first argument resolved
+    if isinstance(type_annotation, _AnnotatedAlias):
+        return has_type(args[0], f)
+
+    # Filter out anything we don't need
+    if len(args) > 1:
+        new_args = []
+        for a in args:
+            # Optional type hint, isn't required
+            if a is None:
+                continue  # pragma: no cover
+
+            new_args.append(a)
+
+        args = tuple(new_args)
+
+    return any(has_type(i, f) for i in args)
