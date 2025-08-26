@@ -1,13 +1,13 @@
 # Django Shinobi - Fast Django REST Framework
 
-<div style="background-color: black; color: red; font-size: 16px; padding: 8px;">
- RUSSIA INVADED UKRAINE - <a href="https://github.com/vitalik/django-ninja/issues/383">Please read (from Shinobi's original author)</a>
-</div>
-
-
 ![Django Shinobi](img/hero.png)
 
 Django Shinobi is a web framework for building APIs with Django and Python 3.6+ type hints.
+
+It's a fork of the fantastic **[Django Ninja](https://github.com/vitalik/django-ninja)** library focused on
+community-desired features and fixes. Check out the list of [differences](https://pmdevita.github.io/django-shinobi/differences/)
+if you're coming from Ninja, as well as the [roadmap](https://github.com/pmdevita/django-shinobi/discussions/6)!
+
 
 Key features:
 
@@ -24,38 +24,45 @@ Key features:
 
 ## Installation
 
+In your Django project, add Django Shinobi.
+
 ```
 pip install django-shinobi
 ```
 
-## Quick Example
+or start a new project.
 
-Start a new Django project (or use an existing one)
-```
+```shell
+pip install django django-shinobi
 django-admin startproject apidemo
 ```
 
-in `urls.py`
+## Usage
+
+
+In your Django project, next to urls.py, create a new file called `api.py`.
+
 
 ```python hl_lines="3 5 8 9 10 15"
 {!./src/index001.py!}
 ```
 
-Now, run it as usual:
+
+Now go to `urls.py` and add the following:
+
+
+```Python hl_lines="3 7"
+...
+from .api import api
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", api.urls),  # <---------- !
+]
 ```
-./manage.py runserver
-```
 
-Note: You don't have to add Django Shinobi to your installed apps for it to work.
+**That's it !**
 
-## Check it
-
-Open your browser at <a href="http://127.0.0.1:8000/api/add?a=1&b=2" target="_blank">http://127.0.0.1:8000/api/add?a=1&b=2</a>
-
-You will see the JSON response as:
-```JSON
-{"result": 3}
-```
 Now you've just created an API that:
 
  - receives an HTTP GET request at `/api/add`
@@ -63,18 +70,25 @@ Now you've just created an API that:
  - decodes the result to JSON
  - generates an OpenAPI schema for defined operation
 
-## Interactive API docs
+### Interactive API docs
+
+Run your Django project
+
+```shell
+python manage.py runsever
+```
 
 Now go to <a href="http://127.0.0.1:8000/api/docs" target="_blank">http://127.0.0.1:8000/api/docs</a>
 
-You will see the automatic, interactive API documentation (provided by the <a href="https://github.com/swagger-api/swagger-ui" target="_blank">OpenAPI / Swagger UI</a> or <a href="https://github.com/Redocly/redoc" target="_blank">Redoc</a>):
+You will see the automatic interactive API documentation (provided by <a href="https://github.com/swagger-api/swagger-ui" target="_blank">Swagger UI</a> or <a href="https://github.com/Redocly/redoc" target="_blank">Redoc</a>):
 
-![Swagger UI](img/index-swagger-ui.png)
+
+![Swagger UI](docs/docs/img/index-swagger-ui.png)
 
 
 ## Recap
 
-In summary, you declare the types of parameters, body, etc. **once only**, as function parameters. 
+In summary, you declare the types of parameters, body, etc. **once only**, as function parameters.
 
 You do that with standard modern Python types.
 
@@ -117,5 +131,9 @@ def operation(a: Item):
     * Files
 * Automatic, interactive API documentation
 
-This project was heavily inspired by <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> (developed by <a href="https://github.com/tiangolo" target="_blank">Sebastián Ramírez</a>)
+## What next?
 
+ - Read the full documentation here - https://pmdevita.github.io/django-shinobi
+ - To support this project, please give star it on Github. ![github star](docs/docs/img/github-star.png)
+ - Share it [via Twitter](https://twitter.com/intent/tweet?text=Check%20out%20Django%20Shinobi%20-%20Fast%20Django%20REST%20Framework%20-%20https%3A%2F%2Fpmdevita.github.io/django-shinobi)
+ - Share your feedback and discuss development on Discord https://discord.gg/ntFTXu7NNv

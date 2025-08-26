@@ -4,12 +4,14 @@ Shinobi has made a number of changes on top of Ninja. For those migrating from
 Ninja to Shinobi, this guide exists to bring you up to speed on the fixes and 
 and new features.
 
-## Ninja 1.4.0 changes
+## Changes from Ninja
 
-At the time of writing, Shinobi includes development changes to Ninja that 
-have not yet been released on Ninja. You can read the list of them them on the 
-[1.4.0a release notes](https://github.com/pmdevita/django-shinobi/releases/tag/v1.4.0a).
-A write-up will be completed for them if Shinobi releases 1.4.0 before Ninja.
+Shinobi 1.4.0 is based on Ninja 1.4.3. You can read the changes for Ninja here.
+
+- [Ninja 1.4.0](https://github.com/vitalik/django-ninja/releases/tag/v1.4.0)
+- [Ninja 1.4.1](https://github.com/vitalik/django-ninja/releases/tag/v1.4.1)
+- [Ninja 1.4.2](https://github.com/vitalik/django-ninja/releases/tag/v1.4.2)
+- [Ninja 1.4.3](https://github.com/vitalik/django-ninja/releases/tag/v1.4.3)
 
 ## Features
 
@@ -138,3 +140,30 @@ Previously, while FileField and ImageField could show a non-null type, they woul
 null. This is fixed with the schema improvements and requires Pydantic 2.7.
 Fixing this created a regression where Pydantic 2.6 and older 
 always show the field as nullable, so upgrading is recommended.
+
+
+## Build and CI Changes
+
+### Better version compatibility
+
+Shinobi now restricts versions of Pydantic to known tested and compatible ones. This should 
+prevent surprise updates to Pydantic from breaking Shinobi.
+
+### Improved CI testing
+
+Previously, Ninja would only run tests against one specific version of Python, Django, and Pydantic. 
+Consequentially, in order to hit 100% test coverage, many branches and lines had to be excluded from the 
+coverage total, which also meant we didn't really have the full picture of line coverage. 
+
+Shinobi now tests against every supported combination of Python, Django, and Pydantic, and combines 
+the coverage from them to account for version-specific code. If you're contributing to Shinobi and 
+open a PR, you'll now also receive a comment detailing which tests passed and failed, and which lines 
+are still missing in coverage. 
+
+These changes should make contributing easier and improve the awareness of our testing.
+
+
+## Support
+
+To ease maintenance, Shinobi only supports [currently supported version of Django](https://www.djangoproject.com/download/#supported-versions).
+As of the release of 1.4.0, this includes Django 4.2, 5.1, and 5.2, along with their supported Python and Pydantic versions.

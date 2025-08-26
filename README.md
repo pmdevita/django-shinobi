@@ -1,12 +1,3 @@
-<a href="https://github.com/vitalik/django-ninja/issues/383"><img width="814" alt="SCR-20230123-m1t" src="https://user-images.githubusercontent.com/95222/214056666-585c0479-c122-4cb3-add4-b8844088ccdd.png"></a>
-
-
-
-<a href="https://github.com/vitalik/django-ninja/issues/383">^ Please read (from the Shinobi's original author)^</a>
-
-
-
-
 <p align="center">
   <a href="https://pmdevita.github.io/django-shinobi/"><img src="https://pmdevita.github.io/django-shinobi/img/logo-big.png"></a>
 </p>
@@ -28,8 +19,8 @@
 **Django Shinobi** is a web framework for building APIs with **Django** and Python 3.6+ **type hints**. 
 
 It's a fork of the fantastic **[Django Ninja](https://github.com/vitalik/django-ninja)** library focused on 
-community-desired features and fixes. Read the [announcement](https://github.com/pmdevita/django-shinobi/discussions/5) 
-for more info and check out the [roadmap](https://github.com/pmdevita/django-shinobi/discussions/6)!
+community-desired features and fixes. Check out the list of [differences](https://pmdevita.github.io/django-shinobi/differences/) 
+if you're coming from Ninja, as well as the [roadmap](https://github.com/pmdevita/django-shinobi/discussions/6)!
 
 
  **Key features:**
@@ -51,16 +42,23 @@ for more info and check out the [roadmap](https://github.com/pmdevita/django-shi
 
 ## Installation
 
+In your Django project, add Django Shinobi.
+
 ```
 pip install django-shinobi
 ```
 
+or start a new project.
 
+```shell
+pip install django django-shinobi
+django-admin startproject apidemo
+```
 
 ## Usage
 
 
-In your django project next to urls.py create new `api.py` file:
+In your Django project, next to urls.py, create a new file called `api.py`.
 
 ```Python
 from ninja import NinjaAPI
@@ -97,6 +95,12 @@ Now you've just created an API that:
  - generates an OpenAPI schema for defined operation
 
 ### Interactive API docs
+
+Run your Django project
+
+```shell
+python manage.py runsever
+```
 
 Now go to <a href="http://127.0.0.1:8000/api/docs" target="_blank">http://127.0.0.1:8000/api/docs</a>
 
