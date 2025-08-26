@@ -19,26 +19,28 @@ dotted attributes and resolver methods. For example::
 """
 
 import warnings
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Type,
-    TypeVar,
-    Union,
-    no_type_check,
-)
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, no_type_check
 
 import pydantic
 from django.db.models import Manager, QuerySet
 from django.db.models.fields.files import FieldFile
 from django.template import Variable, VariableDoesNotExist
-from pydantic import BaseModel, Field, ValidationInfo, model_validator, validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+    validator,
+)
 from pydantic._internal._model_construction import ModelMetaclass
+from pydantic.fields import FieldInfo
 from pydantic.functional_validators import ModelWrapValidatorHandler
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from typing_extensions import dataclass_transform
 
+from ninja.conf import settings
+from ninja.signature.details import is_classvar_type, is_collection_type
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
 
@@ -110,6 +112,32 @@ class DjangoGetter:
         return f"<DjangoGetter: {repr(self._obj)}>"
 
 
+class ObjectPatcher:
+    __slots__ = ("_obj", "_dict")
+
+    def __init__(self, obj: Any):
+        self._obj = obj
+        self._dict: Dict[str, Any] = {}
+
+    def __getattr__(self, key: str) -> Any:
+        if key in self._dict:
+            value = self._dict[key]
+        else:
+            if isinstance(self._obj, dict):
+                if key not in self._obj:
+                    raise AttributeError(key)
+                value = self._obj[key]
+            else:
+                value = getattr(self._obj, key)
+        return value
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._dict[key] = value
+
+    def __repr__(self) -> str:
+        return f"<ObjectPatcher: {repr(self._obj)} + {repr(self._dict)}>"
+
+
 class Resolver:
     __slots__ = ("_func", "_static", "_takes_context")
     _static: bool
@@ -126,6 +154,17 @@ class Resolver:
 
         arg_names = get_args_names(self._func)
         self._takes_context = has_kwargs(self._func) or "context" in arg_names
+
+    def run(self, value: Any, info: Any) -> Any:
+        kwargs = {}
+        if self._takes_context:
+            kwargs["context"] = info
+
+        if self._static:
+            return self._func(value, **kwargs)
+        raise NotImplementedError(
+            "Non static resolves are not supported yet"
+        )  # pragma: no cover
 
     def __call__(self, getter: DjangoGetter) -> Any:
         kwargs = {}
@@ -158,10 +197,15 @@ class Resolver:
 @dataclass_transform(kw_only_default=True, field_specifiers=(Field,))
 class ResolverMetaclass(ModelMetaclass):
     _ninja_resolvers: Dict[str, Resolver]
+    _aliases: Dict[str, str]
 
     @no_type_check
     def __new__(cls, name, bases, namespace, **kwargs):
         resolvers = {}
+        aliases = {}
+        compatibility: Optional[bool] = namespace.get("_compatibility", None)
+        if compatibility is None:
+            compatibility = settings.COMPATIBILITY
 
         for base in reversed(bases):
             base_resolvers = getattr(base, "_ninja_resolvers", None)
@@ -178,9 +222,101 @@ class ResolverMetaclass(ModelMetaclass):
                 continue  # pragma: no cover
             resolvers[attr[8:]] = Resolver(resolve_func)
 
+        # Check for string alias paths and register them
+        for field_name, field in namespace.items():
+            if not isinstance(field, FieldInfo):
+                continue
+            alias = field.validation_alias or field.alias
+            if isinstance(alias, str) and "." in alias:
+                aliases[field_name] = alias
+
+        # When the base Schema class is being created, do not attach
+        # resolver validators, otherwise subclasses won't be able to override them
+        if bases != (BaseModel,):
+            # Always attach DjangoGetter in compatibility mode
+            # in case the user attaches any model/field validators
+            if compatibility:
+                namespace["__ninja_resolvers_validator"] = model_validator(mode="wrap")(
+                    _run_root_validator
+                )
+            else:
+                # We only need to attach the full resolver validator if it's used
+                if resolvers or aliases:
+                    namespace["__ninja_resolvers_validator"] = model_validator(
+                        mode="before"
+                    )(_validate_resolvers)
+
+                # Rewrite any annotations looking for collections to include the ManagerValidator
+                for annotation_name, annotation in namespace.get(
+                    "__annotations__", {}
+                ).items():
+                    if annotation_name.startswith("_") or is_classvar_type(annotation):
+                        continue
+                    # Attach a validator to evaluate QuerySets for collection type fields
+                    if is_collection_type(annotation):
+                        namespace[f"__ninja_manager_validator_{annotation_name}"] = (
+                            field_validator(
+                                annotation_name, mode="before"
+                            )(_manager_to_queryset)
+                        )
+
         result = super().__new__(cls, name, bases, namespace, **kwargs)
         result._ninja_resolvers = resolvers
+        result._aliases = aliases
         return result
+
+
+def _manager_to_queryset(value: Union[Manager, Any]) -> Union[QuerySet, Any]:
+    if isinstance(value, Manager):
+        return value.all()
+    return value
+
+
+def _validate_resolvers(cls: Type["Schema"], value: Any, info: ValidationInfo) -> Any:
+    wrapped = ObjectPatcher(value)
+
+    # Resolve path aliases
+    for path in cls._aliases.values():
+        # Don't apply alias if this is a key of an attribute on this object
+        if hasattr(value, path):
+            continue
+
+        if hasattr(value, "__getitem__"):
+            try:
+                value.__getitem__(path)
+                continue
+            except KeyError:
+                pass
+
+        try:
+            wrapped[path] = Variable(path).resolve(value)
+        except VariableDoesNotExist:
+            pass
+
+    # Evaluate resolvers
+    for key, func in cls._ninja_resolvers.items():
+        wrapped[key] = func.run(value, info.context)
+
+    return wrapped
+
+
+def _run_root_validator(
+    cls: Any,
+    values: Any,
+    handler: ModelWrapValidatorHandler[S],
+    info: ValidationInfo,
+) -> Any:
+    # If Pydantic intends to validate against the __dict__ of the immediate Schema
+    # object, then we need to call `handler` directly on `values` before the conversion
+    # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
+    # will not persist to the original object.
+    forbids_extra = cls.model_config.get("extra") == "forbid"
+    should_validate_assignment = cls.model_config.get("validate_assignment", False)
+    if forbids_extra or should_validate_assignment:
+        handler(values)
+
+    values = DjangoGetter(values, cls, info.context)
+    return handler(values)
 
 
 class NinjaGenerateJsonSchema(GenerateJsonSchema):
@@ -207,25 +343,10 @@ class NinjaGenerateJsonSchema(GenerateJsonSchema):
 
 
 class Schema(BaseModel, metaclass=ResolverMetaclass):
+    _compatibility: Optional[bool] = None
+
     class Config:
         from_attributes = True  # aka orm_mode
-
-    @model_validator(mode="wrap")
-    @classmethod
-    def _run_root_validator(
-        cls, values: Any, handler: ModelWrapValidatorHandler[S], info: ValidationInfo
-    ) -> Any:
-        # If Pydantic intends to validate against the __dict__ of the immediate Schema
-        # object, then we need to call `handler` directly on `values` before the conversion
-        # to DjangoGetter, since any checks or modifications on DjangoGetter's __dict__
-        # will not persist to the original object.
-        forbids_extra = cls.model_config.get("extra") == "forbid"
-        should_validate_assignment = cls.model_config.get("validate_assignment", False)
-        if forbids_extra or should_validate_assignment:
-            handler(values)
-
-        values = DjangoGetter(values, cls, info.context)
-        return handler(values)
 
     @classmethod
     def from_orm(cls: Type[S], obj: Any, **kw: Any) -> S:
