@@ -58,7 +58,7 @@ django-admin startproject apidemo
 ## Usage
 
 
-In your Django project, next to urls.py, create new file called `api.py`.
+In your Django project, next to urls.py, create a new file called `api.py`.
 
 ```Python
 from ninja import NinjaAPI

@@ -40,7 +40,7 @@ django-admin startproject apidemo
 ## Usage
 
 
-In your Django project, next to urls.py, create new file called `api.py`.
+In your Django project, next to urls.py, create a new file called `api.py`.
 
 
 ```python hl_lines="3 5 8 9 10 15"

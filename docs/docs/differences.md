@@ -4,12 +4,14 @@ Shinobi has made a number of changes on top of Ninja. For those migrating from
 Ninja to Shinobi, this guide exists to bring you up to speed on the fixes and 
 and new features.
 
-## Ninja 1.4.0 changes
+## Changes from Ninja
 
-Shinobi 1.4.0 is based on Ninja 1.4.1. You can read the changes for Ninja here.
+Shinobi 1.4.0 is based on Ninja 1.4.3. You can read the changes for Ninja here.
 
 - [Ninja 1.4.0](https://github.com/vitalik/django-ninja/releases/tag/v1.4.0)
 - [Ninja 1.4.1](https://github.com/vitalik/django-ninja/releases/tag/v1.4.1)
+- [Ninja 1.4.2](https://github.com/vitalik/django-ninja/releases/tag/v1.4.2)
+- [Ninja 1.4.3](https://github.com/vitalik/django-ninja/releases/tag/v1.4.3)
 
 ## Features
 
@@ -159,3 +161,9 @@ open a PR, you'll now also receive a comment detailing which tests passed and fa
 are still missing in coverage. 
 
 These changes should make contributing easier and improve the awareness of our testing.
+
+
+## Support
+
+To ease maintenance, Shinobi only supports [currently supported version of Django](https://www.djangoproject.com/download/#supported-versions).
+As of the release of 1.4.0, this includes Django 4.2, 5.1, and 5.2, along with their supported Python and Pydantic versions.
