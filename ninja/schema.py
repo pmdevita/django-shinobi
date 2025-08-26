@@ -96,7 +96,7 @@ class DjangoGetter:
             return list(result.all())
 
         elif isinstance(result, getattr(QuerySet, "__origin__", QuerySet)):
-            return result
+            return list(result)
 
         if callable(result):
             return result()
