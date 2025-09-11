@@ -84,7 +84,7 @@ jobs:
       - name: Install Dependencies
         run: flit install --symlink
       - name: Download Coverage Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
       - name: Combine Coverage Artifacts
