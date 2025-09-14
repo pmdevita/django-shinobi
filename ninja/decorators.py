@@ -70,13 +70,11 @@ class asyncable(object):
         return self
 
     def __is_awaited(self) -> bool:
-        frame = inspect.stack()[2]
-        return (
-            frame.positions.col_offset >= 6 and
-            frame.code_context[frame.index]
-            [frame.positions.col_offset - 6:frame.positions.col_offset] ==
-            "await "
-        )
+        try:
+            asyncio.get_running_loop()
+            return True
+        except RuntimeError:
+            return False
 
     def __get__(
         self,
@@ -90,15 +88,15 @@ class asyncable(object):
                 raise RuntimeError(
                     "Attempting to call asyncable with await, but no asynchronous call has been defined"
                 )
-            bound_method = self.__async.__get__(instance, ownerclass)
-            if isinstance(self.__sync, classmethod):
-                return lambda: asyncio.ensure_future(
-                    bound_method(ownerclass, *args, **kwargs)
-                )
-            return lambda: asyncio.ensure_future(bound_method(*args, **kwargs))
+            async def closure(*args, **kwargs):
+                bound_method = self.__async.__get__(instance, ownerclass)
+                return await bound_method(*args, **kwargs)
+            return closure
 
-        bound_method = self.__sync.__get__(instance, ownerclass)
-        return lambda: bound_method(*args, **kwargs)
+        def closure(*args, **kwargs):
+            bound_method = self.__sync.__get__(instance, ownerclass)
+            return bound_method(*args, **kwargs)
+        return closure
 
     def __call__(self, *args, **kwargs) -> Any:
         if self.__is_awaited():

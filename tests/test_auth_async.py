@@ -1,5 +1,9 @@
 import asyncio
+from time import sleep
 
+from pydantic.type_adapter import R
+
+from ninja.decorators import asyncable
 import pytest
 
 from ninja import NinjaAPI
@@ -175,4 +179,59 @@ async def test_async_with_bearer():
     assert res.json() == {"detail": "Unauthorized"}
 
     res = await client.get("/async", headers={"Authorization": "Bearer secret"})
+    assert res.json() == {"auth": "secret"}
+
+
+@pytest.mark.asyncio
+async def test_asyncable_async_with_bearer():
+    class BearerAuth(HttpBearer):
+        @asyncable
+        def authenticate(self, request, key):
+            raise Exception("This should not be called")
+
+        @authenticate.asynchronous
+        async def authenticate(self, request, key):
+            await asyncio.sleep(0)
+            if key == "secret":
+                return key
+
+    api = NinjaAPI(auth=BearerAuth())
+
+    @api.get("/async")
+    async def async_view(request):
+        return {"auth": request.auth}
+
+    client = TestAsyncClient(api)
+
+    res = await client.get("/async")  # NO key
+    assert res.json() == {"detail": "Unauthorized"}
+
+    res = await client.get("/async", headers={"Authorization": "Bearer secret"})
+    assert res.json() == {"auth": "secret"}
+
+
+def test_asyncable_sync_with_bearer():
+    class BearerAuth(HttpBearer):
+        @asyncable
+        def authenticate(self, request, key):
+            sleep(0)
+            if key == "secret":
+                return key
+
+        @authenticate.asynchronous
+        async def authenticate(self, request, key):
+            raise Exception("This should not be called")
+
+    api = NinjaAPI(auth=BearerAuth())
+
+    @api.get("/sync")
+    def sync_view(request):
+        return {"auth": request.auth}
+
+    client = TestClient(api)
+
+    res = client.get("/sync")  # NO key
+    assert res.json() == {"detail": "Unauthorized"}
+
+    res = client.get("/sync", headers={"Authorization": "Bearer secret"})
     assert res.json() == {"auth": "secret"}
