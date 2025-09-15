@@ -1,13 +1,15 @@
 import asyncio
 from time import sleep
-
-from pydantic.type_adapter import R
-
-from ninja.decorators import asyncable
+from typing import Any, Optional
+from django.conf import settings
+from django.http import HttpRequest
+from django.contrib.auth import get_user_model
 import pytest
 
 from ninja import NinjaAPI
+from ninja.decorators import asyncable
 from ninja.security import APIKeyQuery, HttpBearer
+from ninja.security.apikey import APIKeyCookie
 from ninja.testing import TestAsyncClient, TestClient
 
 
@@ -183,7 +185,7 @@ async def test_async_with_bearer():
 
 
 @pytest.mark.asyncio
-async def test_asyncable_async_with_bearer():
+async def test_hybrid_auth_async_with_bearer():
     class BearerAuth(HttpBearer):
         @asyncable
         def authenticate(self, request, key):
@@ -210,7 +212,7 @@ async def test_asyncable_async_with_bearer():
     assert res.json() == {"auth": "secret"}
 
 
-def test_asyncable_sync_with_bearer():
+def test_hyrbid_auth_sync_with_bearer():
     class BearerAuth(HttpBearer):
         @asyncable
         def authenticate(self, request, key):
@@ -235,3 +237,31 @@ def test_asyncable_sync_with_bearer():
 
     res = client.get("/sync", headers={"Authorization": "Bearer secret"})
     assert res.json() == {"auth": "secret"}
+
+
+@pytest.mark.asyncio
+async def test_asyncable_handle_sync_with_bearer(db):
+
+    User = get_user_model()
+    class SessionAuth(APIKeyCookie):
+        param_name: str = settings.SESSION_COOKIE_NAME
+
+        def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
+            user = User.objects.get(username="test")
+            if user.is_authenticated:
+                request.user = user
+                return request.user
+
+            return None
+
+    user = await User.objects.acreate(username="test")
+    api = NinjaAPI(auth=SessionAuth())
+
+    @api.get("/async")
+    async def async_view(request):
+        return {"user": request.user.username}
+
+    client = TestAsyncClient(api)
+
+    res = await client.get("/async")  # NO key
+    assert res.json() == {"user": "test"}
