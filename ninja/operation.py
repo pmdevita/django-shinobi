@@ -380,6 +380,7 @@ class AsyncOperation(Operation):
         return None
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
+        from asgiref.sync import sync_to_async
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
@@ -389,7 +390,7 @@ class AsyncOperation(Operation):
                     else:
                         result = await cor
                 else:
-                    result = callback(request)
+                    result = await sync_to_async(callback)(request)
             except Exception as exc:
                 return self.api.on_exception(request, exc)
 
