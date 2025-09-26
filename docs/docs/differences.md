@@ -40,7 +40,7 @@ class MySchema(Schema):
     ...
 ```
 
-In 1.5.0, the default value for `NINJA_COMPATIBILITY` will be set to `True`, making the performance improvements 
+In 1.5.0, the default value for `NINJA_COMPATIBILITY` will be set to `False`, making the performance improvements 
 **opt-out**. The compatibility behavior will be removed in 1.6.0.
 
 ### Improved Choices Enum support
