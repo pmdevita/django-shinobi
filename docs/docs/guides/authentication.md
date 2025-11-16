@@ -181,7 +181,7 @@ the same way an operation would:
 
 ## Async authentication
 
-**Django Ninja** has support for asynchronous authentication. Default authentication classes are  async-compatible, you can also define your custom asynchronous authentication callables and pass them in using `auth`.
+**Django Ninja** has support for asynchronous authentication. Default authentication classes are async-compatible, you can also define your own custom asynchronous authentication callables and pass them in using `auth`.
 
 ```python
 async def async_auth(request):
@@ -193,7 +193,7 @@ def pets(request):
     ...
 ```
 
-If you pass a synchronous authentication function it will be wrapped in sync_to_async().
+Hybrid auth will look for either a sync or async function depending if the endpoint is async or sync. If the class only has synchronous authentication function it will be wrapped in sync_to_async(), if the class only has asynchronous authentication function it will be wrapped in async_to_sync().
 
 Hybrid authentication classes can also be created to manage both sync and asynchronous endpoints, this will
 help maintain async performance.

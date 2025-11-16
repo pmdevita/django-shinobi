@@ -15,7 +15,7 @@ from typing import (
 )
 
 import pydantic
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.http.response import HttpResponseBase
 
@@ -380,7 +380,6 @@ class AsyncOperation(Operation):
         return None
 
     async def _run_authentication(self, request: HttpRequest) -> Optional[HttpResponse]:  # type: ignore
-        from asgiref.sync import sync_to_async
         for callback in self.auth_callbacks:
             try:
                 if is_async_callable(callback) or getattr(callback, "is_async", False):
@@ -485,8 +484,6 @@ class PathView:
     async def _async_view(
         self, request: HttpRequest, *a: Any, **kw: Any
     ) -> HttpResponseBase:
-        from asgiref.sync import sync_to_async
-
         operation = self._find_operation(request)
         if operation is None:
             return self._not_allowed()
