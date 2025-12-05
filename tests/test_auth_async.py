@@ -212,7 +212,7 @@ async def test_hybrid_auth_async_with_bearer():
     assert res.json() == {"auth": "secret"}
 
 
-def test_hyrbid_auth_sync_with_bearer():
+def test_hybrid_auth_sync_with_bearer():
     class BearerAuth(HttpBearer):
         @asyncable
         def authenticate(self, request, key):
