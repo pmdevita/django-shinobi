@@ -1,6 +1,18 @@
 import asyncio
 from functools import partial
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Generic,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
+
+from typing_extensions import ParamSpec, Self
 
 from ninja.operation import Operation
 from ninja.types import TCallable
@@ -43,7 +55,13 @@ def _apply_decorators(
         operation.run = deco(operation.run)  # type: ignore
 
 
-class asyncable:
+ArgT = ParamSpec("ArgT")
+ReturnT = TypeVar("ReturnT")
+
+Instance = TypeVar("Instance")
+
+
+class asyncable(Generic[ReturnT]):
     """Decorator to make a function callable from both sync and async contexts
 
     Example:
@@ -62,11 +80,11 @@ class asyncable:
     More details: https://itsjohannawren.medium.com/single-call-sync-and-async-in-python-2acadd07c9d6
     """
 
-    def __init__(self, method: Callable):
+    def __init__(self, method: Callable[..., ReturnT]) -> None:
         self.__sync = method
-        self.__async = None
+        self.__async: Optional[Callable[..., ReturnT]] = None
 
-    def asynchronous(self, method: Callable) -> Type["asyncable"]:
+    def asynchronous(self, method: Callable[..., ReturnT]) -> "asyncable":
         self.__async = method
         return self
 
@@ -78,35 +96,40 @@ class asyncable:
             return False
 
     def __get__(
-        self,
-        instance: Type,
-        ownerclass: Optional[Type[Type]] = None,
-        *args,
-        **kwargs,
-    ) -> Callable:
+        self, instance: Optional[Instance], ownerclass: Type[Instance]
+    ) -> Union[
+        Self, Callable[..., ReturnT], Callable[..., Coroutine[Any, Any, ReturnT]]
+    ]:
+        if instance is None:
+            return self
         if self.__is_awaited():
             if self.__async is None:
                 raise RuntimeError(
                     "Attempting to call asyncable with await, but no asynchronous call has been defined"
                 )
 
-            async def closure(*args, **kwargs):
-                bound_method = self.__async.__get__(instance, ownerclass)
+            async def async_closure(*args: ArgT.args, **kwargs: ArgT.kwargs) -> ReturnT:
+                assert self.__async is not None
+                bound_method: Callable[ArgT, Coroutine[Any, Any, ReturnT]] = (
+                    self.__async.__get__(instance, ownerclass)
+                )
                 return await bound_method(*args, **kwargs)
 
-            return closure
+            return async_closure
 
-        def closure(*args, **kwargs):
-            bound_method = self.__sync.__get__(instance, ownerclass)
+        def sync_closure(*args: ArgT.args, **kwargs: ArgT.kwargs) -> ReturnT:
+            bound_method: Callable[ArgT, ReturnT] = self.__sync.__get__(
+                instance, ownerclass
+            )
             return bound_method(*args, **kwargs)
 
-        return closure
+        return sync_closure
 
-    def __call__(self, *args, **kwargs) -> Any:
+    def __call__(self, *args: ArgT.args, **kwargs: ArgT.kwargs) -> ReturnT:
         if self.__is_awaited():
             if self.__async is None:
                 raise RuntimeError(
                     "Attempting to call asyncable with await, but no asynchronous call has been defined"
                 )
-            return asyncio.ensure_future(self.__async(*args, **kwargs))
+            return self.__async(*args, **kwargs)
         return self.__sync(*args, **kwargs)

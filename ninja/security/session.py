@@ -22,7 +22,7 @@ class SessionAuth(APIKeyCookie):
         return None
 
     @authenticate.asynchronous
-    async def authenticate(
+    async def async_authenticate(
         self, request: HttpRequest, key: Optional[str]
     ) -> Optional[Any]:
         user = await request.auser()
@@ -46,11 +46,11 @@ class SessionAuthSuperUser(APIKeyCookie):
         return None
 
     @authenticate.asynchronous
-    async def authenticate(
+    async def async_authenticate(
         self, request: HttpRequest, key: Optional[str]
     ) -> Optional[Any]:
         user = await request.auser()
-        if user.is_authenticated and user.is_superuser:
+        if user.is_authenticated and getattr(user, "is_superuser", False):
             return user
         return None
 
@@ -67,7 +67,7 @@ class SessionAuthIsStaff(SessionAuthSuperUser):
         return None
 
     @authenticate.asynchronous
-    async def authenticate(
+    async def async_authenticate(
         self, request: HttpRequest, key: Optional[str]
     ) -> Optional[Any]:
         user = await request.auser()
