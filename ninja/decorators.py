@@ -43,6 +43,7 @@ def _apply_decorators(
     for deco in decorators:
         operation.run = deco(operation.run)  # type: ignore
 
+
 class asyncable(object):
     """Decorator to make a function callable from both sync and async contexts
 
@@ -55,12 +56,13 @@ class asyncable(object):
     async def my_function_async(request):
         return HttpResponse("Hello, world!")
 
-    
+
     resp = my_function() # Sync call
     resp = await my_function() # Async call
-    
+
     More details: https://itsjohannawren.medium.com/single-call-sync-and-async-in-python-2acadd07c9d6
     """
+
     def __init__(self, method: Callable):
         self.__sync = method
         self.__async = None
@@ -88,14 +90,17 @@ class asyncable(object):
                 raise RuntimeError(
                     "Attempting to call asyncable with await, but no asynchronous call has been defined"
                 )
+
             async def closure(*args, **kwargs):
                 bound_method = self.__async.__get__(instance, ownerclass)
                 return await bound_method(*args, **kwargs)
+
             return closure
 
         def closure(*args, **kwargs):
             bound_method = self.__sync.__get__(instance, ownerclass)
             return bound_method(*args, **kwargs)
+
         return closure
 
     def __call__(self, *args, **kwargs) -> Any:
