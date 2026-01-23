@@ -1,10 +1,11 @@
 import asyncio
 from time import sleep
 from typing import Any, Optional
-from django.conf import settings
-from django.http import HttpRequest
-from django.contrib.auth import get_user_model
+
 import pytest
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.http import HttpRequest
 
 from ninja import NinjaAPI
 from ninja.decorators import asyncable
@@ -256,7 +257,7 @@ async def test_asyncable_handle_sync_with_bearer(db):
 
             return None
 
-    user = await User.objects.acreate(username="test")
+    await User.objects.acreate(username="test")
     api = NinjaAPI(auth=SessionAuth())
 
     @api.get("/async")
