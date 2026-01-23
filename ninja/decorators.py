@@ -1,7 +1,6 @@
 import asyncio
-import inspect
 from functools import partial
-from typing import Any, Callable, Optional, Type, Tuple
+from typing import Any, Callable, Optional, Tuple, Type
 
 from ninja.operation import Operation
 from ninja.types import TCallable
@@ -44,7 +43,7 @@ def _apply_decorators(
         operation.run = deco(operation.run)  # type: ignore
 
 
-class asyncable(object):
+class asyncable:
     """Decorator to make a function callable from both sync and async contexts
 
     Example:
