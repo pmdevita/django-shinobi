@@ -241,12 +241,14 @@ def test_hybrid_auth_sync_with_bearer():
 
 @pytest.mark.asyncio
 async def test_asyncable_handle_sync_with_bearer(db):
-
     User = get_user_model()
+
     class SessionAuth(APIKeyCookie):
         param_name: str = settings.SESSION_COOKIE_NAME
 
-        def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
+        def authenticate(
+            self, request: HttpRequest, key: Optional[str]
+        ) -> Optional[Any]:
             user = User.objects.get(username="test")
             if user.is_authenticated:
                 request.user = user
