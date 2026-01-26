@@ -2,6 +2,9 @@
 requires = ["flit_core >=2,<4"]
 build-backend = "flit_core.buildapi"
 
+[project]
+requires-python = ">=3.8,<3.15"
+
 [tool.flit.metadata]
 module = "ninja"
 dist-name = "django-shinobi"
@@ -41,7 +44,7 @@ classifiers = [
 
 requires = ["Django >=4.2", "pydantic >=2.5,<2.13"]
 description-file = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.15"
 
 
 [tool.flit.metadata.urls]
