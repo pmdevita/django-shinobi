@@ -64,6 +64,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.ref }}
+      - name: Debug matrix values
+        run: |
+          echo "Python version: ${{ matrix.python-version }}"
+          echo "Django version: ${{ matrix.django-version }}"
+          echo "Pydantic version: ${{ matrix.pydantic-version }}"
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
