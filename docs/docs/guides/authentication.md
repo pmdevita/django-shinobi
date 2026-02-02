@@ -181,7 +181,7 @@ the same way an operation would:
 
 ## Async authentication
 
-**Django Ninja** has support for asynchronous authentication. Default authentication classes are async-compatible, you can also define your own custom asynchronous authentication callables and pass them in using `auth`.
+**Django Ninja** has basic support for asynchronous authentication. While the default authentication classes are not async-compatible, you can still define your custom asynchronous authentication callables and pass them in using `auth`.
 
 ```python
 async def async_auth(request):
@@ -192,37 +192,6 @@ async def async_auth(request):
 def pets(request):
     ...
 ```
-
-If your auth class and API aren't both sync or async (for example, your API is async but your auth class is sync), Shinobi will automatically adapt between contexts. This is suitable for most cases. However, you can avoid the (minimal) overhead from context switching and improve throughput by implementing a hybrid auth class using the @asyncable decorator.
-
-```python
-from ninja.decorators import asyncable
-
-class CustomAuth
-    @asyncable
-    def authentication(request):
-        user = User.objects.get(username="test")
-        if user.is_authenticated:
-            request.user = user
-            return request.user
-
-        return None
-
-    @authentication.asynchronous
-    async def authentication(request):
-        user = await User.objects.aget(username="test")
-        if user.is_authenticated:
-            request.user = user
-            return request.user
-
-        return None
-
-
-@api.get("/pets", auth=CustomAuth())
-def pets(request):
-    ...
-```
-
 
 
 See [Handling errors](errors.md) for more information.

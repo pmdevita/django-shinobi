@@ -3,7 +3,6 @@ from typing import Any, Optional
 from django.conf import settings
 from django.http import HttpRequest
 
-from ninja.decorators import asyncable
 from ninja.security.apikey import APIKeyCookie
 
 __all__ = ["SessionAuth", "SessionAuthSuperUser", "SessionAuthIsStaff"]
@@ -14,20 +13,9 @@ class SessionAuth(APIKeyCookie):
 
     param_name: str = settings.SESSION_COOKIE_NAME
 
-    @asyncable
     def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
         if request.user.is_authenticated:
             return request.user
-
-        return None
-
-    @authenticate.asynchronous
-    async def authenticate(
-        self, request: HttpRequest, key: Optional[str]
-    ) -> Optional[Any]:
-        user = await request.auser()
-        if user.is_authenticated:
-            return user
 
         return None
 
@@ -37,7 +25,6 @@ class SessionAuthSuperUser(APIKeyCookie):
 
     param_name: str = settings.SESSION_COOKIE_NAME
 
-    @asyncable
     def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
         is_superuser = getattr(request.user, "is_superuser", None)
         if request.user.is_authenticated and is_superuser:
@@ -45,18 +32,8 @@ class SessionAuthSuperUser(APIKeyCookie):
 
         return None
 
-    @authenticate.asynchronous
-    async def authenticate(
-        self, request: HttpRequest, key: Optional[str]
-    ) -> Optional[Any]:
-        user = await request.auser()
-        if user.is_authenticated and user.is_superuser:
-            return user
-        return None
-
 
 class SessionAuthIsStaff(SessionAuthSuperUser):
-    @asyncable
     def authenticate(self, request: HttpRequest, key: Optional[str]) -> Optional[Any]:
         result = super().authenticate(request, key)
         if result is not None:
@@ -64,13 +41,4 @@ class SessionAuthIsStaff(SessionAuthSuperUser):
         if request.user.is_authenticated and getattr(request.user, "is_staff", None):
             return request.user
 
-        return None
-
-    @authenticate.asynchronous
-    async def authenticate(
-        self, request: HttpRequest, key: Optional[str]
-    ) -> Optional[Any]:
-        user = await request.auser()
-        if user.is_authenticated and getattr(request.user, "is_staff", None):
-            return user
         return None

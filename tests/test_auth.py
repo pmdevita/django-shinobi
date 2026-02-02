@@ -15,7 +15,7 @@ from ninja.security import (
     django_auth_superuser,
 )
 from ninja.security.base import AuthBase
-from ninja.testing import TestClient
+from ninja.testing import TestAsyncClient, TestClient
 
 
 def callable_auth(request):
@@ -82,6 +82,10 @@ def demo_operation(request):
     return {"auth": request.auth}
 
 
+async def async_demo_operation(request):
+    return {"auth": request.auth}
+
+
 api = NinjaAPI(csrf=True)
 
 
@@ -105,8 +109,14 @@ for path, auth in [
 ]:
     api.get(f"/{path}", auth=auth, operation_id=path)(demo_operation)
 
+for path, auth in [
+    ("async_django_auth", django_auth),
+]:
+    api.get(f"/{path}", auth=auth, operation_id=path)(async_demo_operation)
+
 
 client = TestClient(api)
+async_client = TestAsyncClient(api)
 
 
 class MockUser(str):
@@ -261,6 +271,22 @@ def test_auth(path, kwargs, expected_code, expected_body, settings):
     for debug in (False, True):
         settings.DEBUG = debug  # <-- making sure all if debug are covered
         response = client.get(path, **kwargs)
+        assert response.status_code == expected_code
+        assert response.json() == expected_body
+
+
+@pytest.mark.parametrize(
+    "path,kwargs,expected_code,expected_body",
+    [
+        ("/async_django_auth", {}, 401, BODY_UNAUTHORIZED_DEFAULT),
+        ("/async_django_auth", dict(user=MockUser("admin")), 200, dict(auth="admin")),
+    ],
+)
+@pytest.mark.asyncio
+async def test_async_auth(path, kwargs, expected_code, expected_body, settings):
+    for debug in (False, True):
+        settings.DEBUG = debug  # <-- making sure all if debug are covered
+        response = await async_client.get(path, **kwargs)
         assert response.status_code == expected_code
         assert response.json() == expected_body
 
