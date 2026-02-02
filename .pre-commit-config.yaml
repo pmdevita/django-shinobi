@@ -9,7 +9,7 @@ repos:
     rev: v1.7.1
     hooks:
       - id: mypy
-        additional_dependencies: ["django-stubs", "pydantic"]
+        additional_dependencies: ["django-stubs", "pydantic~=2.12"]
         exclude: (tests|docs)/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.5.7
