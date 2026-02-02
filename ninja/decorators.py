@@ -1,6 +1,5 @@
-import asyncio
 from functools import partial
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import Any, Callable, Tuple
 
 from ninja.operation import Operation
 from ninja.types import TCallable
@@ -41,72 +40,3 @@ def _apply_decorators(
 ) -> None:
     for deco in decorators:
         operation.run = deco(operation.run)  # type: ignore
-
-
-class asyncable:
-    """Decorator to make a function callable from both sync and async contexts
-
-    Example:
-    @asyncable
-    def my_function(request):
-        return HttpResponse("Hello, world!")
-
-    @my_function.asynchronous
-    async def my_function_async(request):
-        return HttpResponse("Hello, world!")
-
-
-    resp = my_function() # Sync call
-    resp = await my_function() # Async call
-
-    More details: https://itsjohannawren.medium.com/single-call-sync-and-async-in-python-2acadd07c9d6
-    """
-
-    def __init__(self, method: Callable):
-        self.__sync = method
-        self.__async = None
-
-    def asynchronous(self, method: Callable) -> Type["asyncable"]:
-        self.__async = method
-        return self
-
-    def __is_awaited(self) -> bool:
-        try:
-            asyncio.get_running_loop()
-            return True
-        except RuntimeError:
-            return False
-
-    def __get__(
-        self,
-        instance: Type,
-        ownerclass: Optional[Type[Type]] = None,
-        *args,
-        **kwargs,
-    ) -> Callable:
-        if self.__is_awaited():
-            if self.__async is None:
-                raise RuntimeError(
-                    "Attempting to call asyncable with await, but no asynchronous call has been defined"
-                )
-
-            async def closure(*args, **kwargs):
-                bound_method = self.__async.__get__(instance, ownerclass)
-                return await bound_method(*args, **kwargs)
-
-            return closure
-
-        def closure(*args, **kwargs):
-            bound_method = self.__sync.__get__(instance, ownerclass)
-            return bound_method(*args, **kwargs)
-
-        return closure
-
-    def __call__(self, *args, **kwargs) -> Any:
-        if self.__is_awaited():
-            if self.__async is None:
-                raise RuntimeError(
-                    "Attempting to call asyncable with await, but no asynchronous call has been defined"
-                )
-            return asyncio.ensure_future(self.__async(*args, **kwargs))
-        return self.__sync(*args, **kwargs)
