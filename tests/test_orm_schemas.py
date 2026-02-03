@@ -215,6 +215,17 @@ def test_all_fields():
         data["properties"]["filefield"].pop("type")
         data["properties"]["imagefield"].pop("type")
 
+    if pydantic_version[1] >= 12:
+        data["properties"]["decimalfield"]["anyOf"] = [
+            {
+                "type": "number",
+            },
+            {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string",
+            },
+        ]
+
     assert SchemaCls.json_schema() == data
 
 
