@@ -20,52 +20,47 @@ jobs:
         django-version: ['4.2', '5.1', '5.2']
         pydantic-version: ['2.5', '2.6', '2.7', '2.8', '2.9', '2.10', '2.11', '2.12']
         exclude:
-          # Pydantic 2.5 supports 3.8-3.13
+          # Python 3.8 exclusions
+          - pydantic-version: '2.11'
+            python-version: '3.8'
+          - pydantic-version: '2.12'
+            python-version: '3.8'
+          - django-version: '5.1'
+            python-version: '3.8'
+          - django-version: '5.2'
+            python-version: '3.8'
+          # Python 3.9 exclusions
+          - django-version: '5.1'
+            python-version: '3.9'
+          - django-version: '5.2'
+            python-version: '3.9'
+          # Python 3.13 exclusions
+          - pydantic-version: '2.6'
+            python-version: '3.13'
+          - pydantic-version: '2.7'
+            python-version: '3.13'
+          - django-version: '4.2'
+            python-version: '3.13'
+          # Python 3.14 exclusions
           - pydantic-version: '2.5'
             python-version: '3.14'
-          # Pydantic 2.6 supports 3.8-3.12
-          - pydantic-version: '2.6'
-            python-version: '3.13'
           - pydantic-version: '2.6'
             python-version: '3.14'
-          # Pydantic 2.7 supports 3.8-3.12
-          - pydantic-version: '2.7'
-            python-version: '3.13'
           - pydantic-version: '2.7'
             python-version: '3.14'
-          # Pydantic 2.8, 2.9, 2.10 don't support 3.14
           - pydantic-version: '2.8'
             python-version: '3.14'
           - pydantic-version: '2.9'
             python-version: '3.14'
           - pydantic-version: '2.10'
             python-version: '3.14'
-          # Pydantic 2.11 supports 3.9-3.13
-          - pydantic-version: '2.11'
-            python-version: '3.8'
-          # Pydantic 2.12 supports 3.9-3.14
-          - pydantic-version: '2.12'
-            python-version: '3.8'
           - pydantic-version: '2.11'
             python-version: '3.14'
-          # Pydantic 2.12+ supports 3.14 (only with Django 5.2)
-          # Django 4.2 supports 3.8-3.12
-          - django-version: '4.2'
-            python-version: '3.13'
           - django-version: '4.2'
             python-version: '3.14'
-          # Django 5.1 supports 3.10-3.13
-          - django-version: '5.1'
-            python-version: '3.8'
-          - django-version: '5.1'
-            python-version: '3.9'
           - django-version: '5.1'
             python-version: '3.14'
-          # Django 5.2 supports 3.10-3.14
-          - django-version: '5.2'
-            python-version: '3.8'
-          - django-version: '5.2'
-            python-version: '3.9'
+          # Note: Pydantic 2.12 + Python 3.14 only works with Django 5.2+
     steps:
       - uses: actions/checkout@v6
         with:
