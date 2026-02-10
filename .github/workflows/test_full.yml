@@ -43,6 +43,9 @@ jobs:
           # Pydantic 2.11 supports 3.9-3.13
           - pydantic-version: '2.11'
             python-version: '3.8'
+          # Pydantic 2.12 supports 3.9-3.14
+          - pydantic-version: '2.12'
+            python-version: '3.8'
           - pydantic-version: '2.11'
             python-version: '3.14'
           # Pydantic 2.12+ supports 3.14 (only with Django 5.2)
@@ -58,7 +61,7 @@ jobs:
             python-version: '3.9'
           - django-version: '5.1'
             python-version: '3.14'
-          # Django 5.2 supports 3.10-3.13, 3.14
+          # Django 5.2 supports 3.10-3.14
           - django-version: '5.2'
             python-version: '3.8'
           - django-version: '5.2'
