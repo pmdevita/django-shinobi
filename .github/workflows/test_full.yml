@@ -35,6 +35,8 @@ jobs:
           - django-version: '5.2'
             python-version: '3.9'
           # Python 3.13 exclusions
+          - pydantic-version: '2.5'
+            python-version: '3.13'
           - pydantic-version: '2.6'
             python-version: '3.13'
           - pydantic-version: '2.7'

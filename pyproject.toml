@@ -42,7 +42,7 @@ classifiers = [
 
 requires = ["Django >=4.2", "pydantic >=2.5,<2.13"]
 description-file = "README.md"
-requires-python = ">=3.8,<3.15"
+requires-python = ">=3.8"
 
 
 [tool.flit.metadata.urls]
