@@ -16,24 +16,23 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
-        django-version: ['4.2', '5.1', '5.2']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        django-version: ['4.2', '5.1', '5.2', '6.0']
         pydantic-version: ['2.5', '2.6', '2.7', '2.8', '2.9', '2.10', '2.11', '2.12']
         exclude:
-          # Python 3.8 exclusions
-          - pydantic-version: '2.11'
-            python-version: '3.8'
-          - pydantic-version: '2.12'
-            python-version: '3.8'
-          - django-version: '5.1'
-            python-version: '3.8'
-          - django-version: '5.2'
-            python-version: '3.8'
           # Python 3.9 exclusions
           - django-version: '5.1'
             python-version: '3.9'
           - django-version: '5.2'
             python-version: '3.9'
+          - django-version: '6.0'
+            python-version: '3.9'
+          # Python 3.10 exclusions
+          - django-version: '6.0'
+            python-version: '3.10'
+          # Python 3.11 exclusions
+          - django-version: '6.0'
+            python-version: '3.11'
           # Python 3.13 exclusions
           - pydantic-version: '2.5'
             python-version: '3.13'
