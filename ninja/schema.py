@@ -19,7 +19,16 @@ dotted attributes and resolver methods. For example::
 """
 
 import warnings
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, no_type_check
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    no_type_check,
+)
 
 import pydantic
 from django.db.models import Manager, QuerySet
@@ -247,9 +256,7 @@ class ResolverMetaclass(ModelMetaclass):
                     )(_validate_resolvers)
 
                 # Rewrite any annotations looking for collections to include the ManagerValidator
-                for annotation_name, annotation in namespace.get(
-                    "__annotations__", {}
-                ).items():
+                for annotation_name, annotation in get_annotations(namespace).items():
                     if annotation_name.startswith("_") or is_classvar_type(annotation):
                         continue
                     # Attach a validator to evaluate QuerySets for collection type fields
@@ -317,6 +324,28 @@ def _run_root_validator(
 
     values = DjangoGetter(values, cls, info.context)
     return handler(values)
+
+
+def get_annotations(namespace: Dict[str, Any]) -> Any:
+    """
+    Inspecting annotations was changed in Python 3.14
+    :param namespace:
+    :return:
+    """
+    # Python 3.13 and earlier
+    if "__annotations__" in namespace:
+        return namespace.get("__annotations__", {})
+
+    # Python 3.14 and newer
+    import annotationlib
+
+    func = annotationlib.get_annotate_from_class_namespace(namespace)
+    if func:
+        return annotationlib.call_annotate_function(
+            func, format=annotationlib.Format.FORWARDREF
+        )
+    # Pydantic should error for any class missing type annotations
+    return {}  # pragma: no cover
 
 
 class NinjaGenerateJsonSchema(GenerateJsonSchema):
