@@ -6,7 +6,7 @@ and new features.
 
 ## Changes from Ninja
 
-Shinobi 1.4.0 is based on Ninja 1.4.3. You can read the changes for Ninja here.
+Shinobi 1.4.x is based on Ninja 1.4.3. You can read the changes for Ninja here.
 
 - [Ninja 1.4.0](https://github.com/vitalik/django-ninja/releases/tag/v1.4.0)
 - [Ninja 1.4.1](https://github.com/vitalik/django-ninja/releases/tag/v1.4.1)
