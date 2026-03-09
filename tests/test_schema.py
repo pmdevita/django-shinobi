@@ -156,6 +156,10 @@ class NewFileSchema(Schema):
     null_file: Optional[FileFieldType]
 
 
+class EmptySchema(Schema):
+    _compatibility = False
+
+
 def test_schema():
     user = User()
     schema = UserSchema.from_orm(user)

@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Dict, Optional, Type
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponseForbidden
@@ -71,3 +71,28 @@ def contribute_operation_args(
     if not hasattr(func, "_ninja_contribute_args"):
         func._ninja_contribute_args = []  # type: ignore
     func._ninja_contribute_args.append((arg_name, arg_type, arg_source))  # type: ignore
+
+
+def get_annotations(namespace: Dict[str, Any]) -> Any:
+    """
+    Inspecting annotations was changed in Python 3.14
+    :param namespace:
+    :return:
+    """
+    # Python 3.13 and earlier
+    if "__annotations__" in namespace:
+        return namespace.get("__annotations__", {})
+
+    # Python 3.14 and newer
+    try:
+        import annotationlib
+    except ImportError:
+        return {}
+
+    func = annotationlib.get_annotate_from_class_namespace(namespace)
+    if func:
+        return annotationlib.call_annotate_function(
+            func, format=annotationlib.Format.FORWARDREF
+        )
+    # Pydantic should error for any class missing type annotations
+    return {}  # pragma: no cover
