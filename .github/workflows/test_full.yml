@@ -108,6 +108,14 @@ jobs:
         run: pip install flit "django>=5.0"
       - name: Install Dependencies
         run: flit install --symlink
+      - name: Remove checked out repo
+        run: |
+          rm -rf *
+      - uses: actions/checkout@v6
+        name: Checkout head branch
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
       - name: Download Coverage Artifacts
         uses: actions/download-artifact@v8
         with:

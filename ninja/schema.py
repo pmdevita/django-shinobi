@@ -52,6 +52,7 @@ from ninja.conf import settings
 from ninja.signature.details import is_classvar_type, is_collection_type
 from ninja.signature.utils import get_args_names, has_kwargs
 from ninja.types import DictStrAny
+from ninja.utils import get_annotations
 
 pydantic_version = list(map(int, pydantic.VERSION.split(".")[:2]))
 assert pydantic_version >= [2, 0], "Pydantic 2.0+ required"
@@ -324,28 +325,6 @@ def _run_root_validator(
 
     values = DjangoGetter(values, cls, info.context)
     return handler(values)
-
-
-def get_annotations(namespace: Dict[str, Any]) -> Any:
-    """
-    Inspecting annotations was changed in Python 3.14
-    :param namespace:
-    :return:
-    """
-    # Python 3.13 and earlier
-    if "__annotations__" in namespace:
-        return namespace.get("__annotations__", {})
-
-    # Python 3.14 and newer
-    import annotationlib
-
-    func = annotationlib.get_annotate_from_class_namespace(namespace)
-    if func:
-        return annotationlib.call_annotate_function(
-            func, format=annotationlib.Format.FORWARDREF
-        )
-    # Pydantic should error for any class missing type annotations
-    return {}  # pragma: no cover
 
 
 class NinjaGenerateJsonSchema(GenerateJsonSchema):
