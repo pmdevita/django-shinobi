@@ -7,6 +7,7 @@ from pydantic.dataclasses import dataclass
 from ninja.errors import ConfigError
 from ninja.orm.factory import create_schema
 from ninja.schema import ResolverMetaclass, Schema
+from ninja.utils import get_annotations
 
 _is_modelschema_class_defined = False
 
@@ -90,7 +91,7 @@ class ModelSchemaMetaclass(ResolverMetaclass):
                 meta_conf = MetaConf.from_schema_class(name, namespace)
 
                 custom_fields = []
-                annotations = namespace.get("__annotations__", {})
+                annotations = get_annotations(namespace)
                 for attr_name, type in annotations.items():
                     if attr_name.startswith("_"):
                         continue
