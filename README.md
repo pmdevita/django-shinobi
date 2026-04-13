@@ -1,3 +1,35 @@
+
+<div align="right">
+  <details>
+    <summary >🌐 Language</summary>
+    <div>
+      <div align="center">
+        <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=en">English</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=zh-CN">简体中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=zh-TW">繁體中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=ja">日本語</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=ko">한국어</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=hi">हिन्दी</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=th">ไทย</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=fr">Français</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=de">Deutsch</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=es">Español</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=it">Italiano</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=ru">Русский</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=pt">Português</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=nl">Nederlands</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=pl">Polski</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=ar">العربية</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=fa">فارسی</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=tr">Türkçe</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=vi">Tiếng Việt</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=id">Bahasa Indonesia</a>
+        | <a href="https://openaitx.github.io/view.html?user=pmdevita&project=django-shinobi&lang=as">অসমীয়া</
+      </div>
+    </div>
+  </details>
+</div>
+
 <p align="center">
   <a href="https://pmdevita.github.io/django-shinobi/"><img src="https://pmdevita.github.io/django-shinobi/img/logo-big.png"></a>
 </p>
