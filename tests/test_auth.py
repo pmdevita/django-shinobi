@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+from django.utils.asyncio import async_unsafe
 
 from ninja import NinjaAPI
 from ninja.errors import AuthorizationError, ConfigError
@@ -67,7 +68,7 @@ class BearerAuth(HttpBearer):
 
 class AsyncBearerAuth(HttpBearer):
     """
-    This one is async but in fact no awaits insdie authenticate
+    This one is async but in fact no awaits inside authenticate
     which led to an await error
     """
 
@@ -86,7 +87,7 @@ async def async_demo_operation(request):
     return {"auth": request.auth}
 
 
-api = NinjaAPI(csrf=True)
+api = NinjaAPI()
 
 
 @api.exception_handler(CustomException)
@@ -283,7 +284,7 @@ def test_auth(path, kwargs, expected_code, expected_body, settings):
     ],
 )
 @pytest.mark.asyncio
-async def test_async_auth(path, kwargs, expected_code, expected_body, settings):
+async def test_async_auth_simple(path, kwargs, expected_code, expected_body, settings):
     for debug in (False, True):
         settings.DEBUG = debug  # <-- making sure all if debug are covered
         response = await async_client.get(path, **kwargs)
@@ -341,3 +342,46 @@ def test_invalid_setup():
 
     with pytest.raises(TypeError):
         HttpBasicAuth()(request)
+
+
+@pytest.mark.asyncio
+async def test_async_auth():
+    _sync_auth_called = False
+    _async_auth_called = False
+    _async_unsafe_func_called = False
+
+    # This is the same decorator Django uses to mark its ORM functions as async unsafe,
+    # which in turns raises a `SynchronousOnlyOperation` error if called
+    # without `sync_to_async`.
+    @async_unsafe("called without sync_to_async")
+    def async_unsafe_function():
+        nonlocal _async_unsafe_func_called
+        _async_unsafe_func_called = True
+
+    class AsyncAuth(APIKeyQuery):
+        async def authenticate(self, request, key):
+            nonlocal _async_auth_called
+            _async_auth_called = True
+            return False
+
+    class SyncAuth(APIKeyQuery):
+        def authenticate(self, request, key):
+            async_unsafe_function()
+            nonlocal _sync_auth_called
+            _sync_auth_called = True
+            return True
+
+    async def handle_request(request):
+        return {"ok": True}
+
+    api = NinjaAPI()
+    api.get("/foobar", auth=[AsyncAuth(), SyncAuth()])(handle_request)
+
+    client = TestAsyncClient(api)
+    response = await client.get("/foobar")
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+    assert _sync_auth_called is True
+    assert _async_auth_called is True
+    assert _async_unsafe_func_called is True

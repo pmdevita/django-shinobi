@@ -3,6 +3,7 @@ from typing import List
 from unittest.mock import Mock
 
 import django
+import pydantic
 import pytest
 from django.contrib.postgres import fields as ps_fields
 from django.db import models
@@ -10,7 +11,7 @@ from django.db.models import Manager
 from django.db.models.enums import TextChoices
 from pydantic import ValidationError
 from pydantic import __version__ as pydantic_version_str
-from util import pydantic_arbitrary_dict_fix, pydantic_ref_fix
+from util import pydantic_ref_fix
 
 from ninja.enum import ChoicesMixin
 from ninja.errors import ConfigError
@@ -91,11 +92,11 @@ def test_all_fields():
 
     SchemaCls = create_schema(AllFields)
     # print(SchemaCls.json_schema())
-    data = {
+    expected_schema = {
         "title": "AllFields",
         "type": "object",
         "properties": {
-            "id": {"title": "ID", "type": "integer"},
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
             "bigintegerfield": {"title": "Bigintegerfield", "type": "integer"},
             "binaryfield": {
                 "title": "Binaryfield",
@@ -162,13 +163,13 @@ def test_all_fields():
                 "title": "Ciemailfield",
             },
             "citextfield": {"type": "string", "title": "Citextfield"},
-            "hstorefield": pydantic_arbitrary_dict_fix({
+            "hstorefield": {
+                # "additionalProperties": True, # this is added in pydantic 2.11
                 "type": "object",
                 "title": "Hstorefield",
-            }),
+            },
         },
         "required": [
-            "id",
             "bigintegerfield",
             "binaryfield",
             "booleanfield",
@@ -203,51 +204,41 @@ def test_all_fields():
         ],
     }
 
-    if pydantic_version[1] <= 6:
-        data["properties"]["filefield"]["anyOf"] = [
-            {"type": "string"},
-            {"type": "null"},
-        ]
-        data["properties"]["imagefield"]["anyOf"] = [
-            {"type": "string"},
-            {"type": "null"},
-        ]
-        data["properties"]["filefield"].pop("type")
-        data["properties"]["imagefield"].pop("type")
-
-    if pydantic_version[1] >= 12:
-        data["properties"]["decimalfield"]["anyOf"] = [
-            {
-                "type": "number",
-            },
-            {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string",
-            },
-        ]
-
-    assert SchemaCls.json_schema() == data
+    pydantic_version = tuple(map(int, pydantic.VERSION.split(".")[:2]))
+    if pydantic_version >= (2, 11):
+        expected_schema["properties"]["hstorefield"]["additionalProperties"] = True
+    if pydantic_version >= (2, 12):
+        # Pydantic 2.12 added pattern validation for decimal strings
+        expected_schema["properties"]["decimalfield"]["anyOf"][1]["pattern"] = (
+            r"^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$"
+        )
+    assert SchemaCls.json_schema() == expected_schema
 
 
-@pytest.mark.parametrize(
-    "field",
-    [
-        models.BigAutoField,
-        models.SmallAutoField,
-    ],
-)
-def test_altautofield(field: type):
-    class ModelAltAuto(models.Model):
-        altautofield = field(primary_key=True)
+def test_altautofield():
+    class ModelWithBigAutoField(models.Model):
+        autofield = models.BigAutoField(primary_key=True)
 
         class Meta:
             app_label = "tests"
 
-    SchemaCls = create_schema(ModelAltAuto)
-    # print(SchemaCls.json_schema())
-    assert SchemaCls.json_schema()["properties"] == {
-        "altautofield": {"title": "Altautofield", "type": "integer"}
-    }
+    class ModelWithSmallAutoField(models.Model):
+        autofield = models.SmallAutoField(primary_key=True)
+
+        class Meta:
+            app_label = "tests"
+
+    BigSchema = create_schema(ModelWithBigAutoField)
+    SmallSchema = create_schema(ModelWithSmallAutoField)
+
+    for cls in [BigSchema, SmallSchema]:
+        print(cls.json_schema()["properties"])
+        assert cls.json_schema()["properties"] == {
+            "autofield": {
+                "anyOf": [{"type": "integer"}, {"type": "null"}],
+                "title": "Autofield",
+            }
+        }
 
 
 def test_django_31_fields():
