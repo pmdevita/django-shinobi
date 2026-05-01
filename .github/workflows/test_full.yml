@@ -132,7 +132,7 @@ jobs:
           files: |
             artifacts/**/*.xml
       - name: Pytest coverage comment
-        uses: orgoro/coverage@v3.2
+        uses: orgoro/coverage@v3.3
         if: ${{ github.event_name == 'pull_request' }}
         with:
           coverageFile: coverage.xml
