@@ -238,3 +238,26 @@ def test_webhook_inherits_auth_from_parent_router():
 
     op = api.get_openapi_schema()["webhooks"]["petCreated"]["post"]
     assert op["security"] == [{"WebhookKey": []}]
+
+
+def test_webhook_multiple_methods_merge_and_hidden_excluded():
+    api = NinjaAPI()
+
+    def pet_created(request, payload: Pet):
+        pass
+
+    def pet_updated(request, payload: Pet):
+        pass
+
+    # Same name registered twice: the second call reuses the existing PathView.
+    api.add_api_webhook("petChanged", ["POST"], pet_created)
+    api.add_api_webhook("petChanged", ["PUT"], pet_updated)
+
+    # A webhook excluded from the schema produces no entry.
+    @api.webhook("petHidden", include_in_schema=False)
+    def pet_hidden(request, payload: Pet):
+        pass
+
+    webhooks = api.get_openapi_schema()["webhooks"]
+    assert set(webhooks["petChanged"].keys()) == {"post", "put"}
+    assert "petHidden" not in webhooks
