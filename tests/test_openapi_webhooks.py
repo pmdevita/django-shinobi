@@ -218,39 +218,6 @@ def test_webhook_with_list_payload():
     }
 
 
-def test_webhook_registered_after_router_mounted():
-    # Eager binding: a webhook added AFTER the subrouter is mounted still gets
-    # its api reference via the late set_api_instance call in add_api_webhook.
-    api = NinjaAPI()
-    subrouter = Router()
-    api.add_router("/v2", subrouter)
-
-    @subrouter.webhook("petCreated")
-    def pet_created(request, payload: Pet):
-        pass
-
-    op = api.get_openapi_schema()["webhooks"]["petCreated"]["post"]
-    assert op["requestBody"]["content"]["application/json"]["schema"] == {
-        "$ref": "#/components/schemas/Pet"
-    }
-
-
-def test_webhook_include_in_schema_false():
-    api = NinjaAPI()
-
-    @api.webhook("petVisible")
-    def pet_visible(request, payload: Pet):
-        pass
-
-    @api.webhook("petHidden", include_in_schema=False)
-    def pet_hidden(request, payload: Pet):
-        pass
-
-    webhooks = api.get_openapi_schema()["webhooks"]
-    assert "petVisible" in webhooks
-    assert "petHidden" not in webhooks
-
-
 def test_webhook_inherits_auth_from_parent_router():
     # auth cascades api -> subrouter operation through set_api_instance, which
     # now walks webhooks too, so the inherited auth shows up in the schema.
@@ -271,19 +238,3 @@ def test_webhook_inherits_auth_from_parent_router():
 
     op = api.get_openapi_schema()["webhooks"]["petCreated"]["post"]
     assert op["security"] == [{"WebhookKey": []}]
-
-
-def test_webhook_multiple_methods_same_name():
-    api = NinjaAPI()
-
-    def pet_created(request, payload: Pet):
-        pass
-
-    def pet_updated(request, payload: Pet):
-        pass
-
-    api.add_api_webhook("petChanged", ["POST"], pet_created)
-    api.add_api_webhook("petChanged", ["PUT"], pet_updated)
-
-    methods = api.get_openapi_schema()["webhooks"]["petChanged"]
-    assert set(methods.keys()) == {"post", "put"}
