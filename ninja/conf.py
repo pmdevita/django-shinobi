@@ -2,10 +2,11 @@ from math import inf
 from typing import Dict, Optional, Set
 
 from django.conf import settings as django_settings
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Settings(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     # Pagination
     PAGINATION_CLASS: str = Field(
         "ninja.pagination.LimitOffsetPagination", alias="NINJA_PAGINATION_CLASS"
@@ -30,9 +31,6 @@ class Settings(BaseModel):
     )
 
     COMPATIBILITY: bool = Field(True, alias="NINJA_COMPATIBILITY")
-
-    class Config:
-        from_attributes = True
 
 
 settings = Settings.model_validate(django_settings)

@@ -137,7 +137,7 @@ python type. In this case you should use `register_field` method to tell django-
 ```python hl_lines="4 7 8 9"
 # models.py
 
-class MyModel(models.Modle):
+class MyModel(models.Model):
     embedding = pgvector.VectorField()
 
 # schemas.py
@@ -173,7 +173,7 @@ def modify_data(request, pk: int, payload: PatchDict[GroupSchema]):
 
 ```
 
-in this example the `payload` argument will be a type of `dict` only fields that were passed in request and validated using `GroupSchema`
+in this example the `payload` argument will be of type `dict` and only contain fields that were passed in the request and validated using `GroupSchema`
 
 ### Choices and Enums
 

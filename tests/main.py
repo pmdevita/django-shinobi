@@ -1,9 +1,13 @@
+from sys import version_info
 from typing import List, Optional
 from uuid import UUID
 
+import pydantic
+import pytest
 from django.urls import register_converter
+from typing_extensions import Annotated
 
-from ninja import Field, Path, Query, Router, Schema
+from ninja import Field, P, Path, PathEx, Query, Router, Schema
 
 router = Router()
 
@@ -36,6 +40,46 @@ def get_float_id(request, item_id: float):
 @router.get("/path/bool/{item_id}")
 def get_bool_id(request, item_id: bool):
     return item_id
+
+
+def custom_validator(value: int) -> int:
+    if value != 42:
+        raise ValueError("Input should pass this custom validator")
+    return value
+
+
+CustomValidatedInt = Annotated[
+    int,
+    pydantic.AfterValidator(custom_validator),
+    pydantic.WithJsonSchema({
+        "type": "int",
+        "example": "42",
+    }),
+]
+
+# TODO: Remove this condition once support for <= 3.8 is dropped
+if version_info >= (3, 9):
+
+    @router.get("/path/param_ex/{item_id}")
+    def get_path_param_ex_id(
+        request,
+        item_id: PathEx[CustomValidatedInt, P(description="path_ex description")],
+    ):
+        return item_id
+
+else:
+
+    def test_annotated_path_ex_unsupported():
+        with pytest.raises(NotImplementedError, match="3.9+"):
+
+            @router.get("/path/param_ex/{item_id}")
+            def get_path_param_ex_id(
+                request,
+                item_id: PathEx[
+                    CustomValidatedInt, P(description="path_ex description")
+                ],
+            ):
+                return item_id
 
 
 @router.get("/path/param/{item_id}")
@@ -211,6 +255,14 @@ def get_query_type(request, query: int):
 
 @router.get("/query/int/optional")
 def get_query_type_optional(request, query: int = None):
+    if query is None:
+        return "foo bar"
+    return f"foo bar {query}"
+
+
+@router.get("/query/str/optional")
+def get_query_str_optional(request, query: str = None):
+    """Test for issue #1607 - str type with None default should be optional."""
     if query is None:
         return "foo bar"
     return f"foo bar {query}"

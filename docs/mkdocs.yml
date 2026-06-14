@@ -6,6 +6,8 @@ repo_url: https://github.com/pmdevita/django-shinobi
 edit_uri: ""
 extra_css:
   - extra.css
+extra_javascript:
+  - javascripts/ask-ai-button.js
 theme:
   name: material
   palette:
@@ -27,7 +29,7 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
   logo: img/docs-logo.png
-  favicon: img/favicon.png
+  favicon: img/favicon.svg
   language: en
   features:
     - navigation.expand
@@ -65,6 +67,7 @@ nav:
           - guides/response/pagination.md
           - guides/response/response-renderers.md
       - Splitting your API with Routers: guides/routers.md
+      - guides/decorators.md
       - guides/authentication.md
       - guides/throttling.md
       - guides/testing.md
@@ -96,6 +99,7 @@ markdown_extensions:
   - abbr
   - codehilite
   - admonition
+  - pymdownx.details
   - pymdownx.superfences
 plugins:
   - search

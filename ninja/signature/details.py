@@ -1,6 +1,7 @@
 import inspect
 import warnings
 from collections import defaultdict, namedtuple
+from sys import version_info
 from typing import (
     Any,
     Callable,
@@ -34,6 +35,7 @@ from ninja.params.models import (
     _MultiPartBody,
 )
 from ninja.signature.utils import get_path_param_names, get_typed_signature
+from ninja.utils import is_optional_type
 
 __all__ = [
     "ViewSignature",
@@ -232,9 +234,24 @@ class ViewSignature:
 
         if get_origin(annotation) is Annotated:
             args = get_args(annotation)
-            if isinstance(args[1], Param):
+            if isinstance(args[-1], Param):
                 prev_default = default
-                annotation, default = args
+                if len(args) == 2:
+                    annotation, default = args
+                else:
+                    # TODO: Remove version check once support for <=3.8 is dropped.
+                    # Annotated[] is only available at runtime in 3.9+ per
+                    # https://docs.python.org/3/library/typing.html#typing.Annotated
+                    if version_info >= (3, 9):
+                        # NOTE: Annotated[args[:-1]] seems to have the same runtime
+                        # behavior as Annotated[*args[:-1]], but the latter is
+                        # invalid in Python < 3.11 because star expressions
+                        # were not allowed in index expressions.
+                        annotation, default = Annotated[args[:-1]], args[-1]
+                    else:  # pragma: no cover -- requires specific Python versions
+                        raise NotImplementedError(
+                            "This definition requires Python version 3.9+"
+                        )
                 if prev_default != self.signature.empty:
                     default.default = prev_default
 
@@ -288,6 +305,11 @@ class ViewSignature:
                 param_source = Query(...)
             else:
                 param_source = Query(default)
+
+        # If default is None but annotation is not Optional,
+        # wrap it in Optional to allow None values in Pydantic v2
+        if default is None and not is_optional_type(annotation):
+            annotation = Optional[annotation]
 
         return FuncParam(
             name, param_source.alias or name, param_source, annotation, is_collection

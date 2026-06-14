@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple, TypeVar
+from typing import TYPE_CHECKING, Any, List, Tuple, TypeVar
 
 import django
 
@@ -14,9 +14,12 @@ if django.VERSION[0] < 5:  # pragma: no cover
 else:  # pragma: no cover
     from django.db.models.enums import ChoicesType
 
+    if TYPE_CHECKING:
+        from django.utils.functional import _StrOrPromise
+
     class NinjaChoicesType(ChoicesType):  # type: ignore[no-redef]
         @property
-        def choices(self) -> "List[Tuple[Any, str]]":
+        def choices(self) -> "List[Tuple[Any, _StrOrPromise]]":
             return NinjaChoicesList(super().choices, choices_enum=self)
 
     class ChoicesMixin(metaclass=NinjaChoicesType):  # type: ignore[no-redef]
