@@ -10,7 +10,7 @@ class NOT_SET_TYPE:
     def __copy__(self) -> Any:
         return NOT_SET
 
-    def __deepcopy__(self, memodict: Optional[Dict] = None) -> Any:
+    def __deepcopy__(self, memodict: Optional[Dict[Any, Any]] = None) -> Any:
         return NOT_SET
 
 
