@@ -60,7 +60,7 @@ test = [
     "psycopg2-binary",
     "mypy==1.7.1",
     "ruff==0.5.7",
-    "django-stubs",
+    "django-stubs==5.2.1",
 ]
 doc = ["mkdocs", "mkdocs-material", "markdown-include", "mkdocstrings"]
 dev = ["pre-commit"]

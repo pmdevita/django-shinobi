@@ -35,7 +35,7 @@ class ModelToDict(dict):
 
 def get_schema_annotations(schema_cls: Type[Any]) -> Dict[str, Any]:
     annotations: Dict[str, Any] = {}
-    excluded_bases = {Schema, ModelSchema, BaseModel}
+    excluded_bases = {BaseModel, Schema, ModelSchema}
     bases = schema_cls.mro()[:-1]
     final_bases = reversed([b for b in bases if b not in excluded_bases])
 
