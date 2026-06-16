@@ -51,6 +51,7 @@ class Router:
         self.exclude_none = exclude_none
 
         self.path_operations: Dict[str, PathView] = {}
+        self.webhooks: Dict[str, PathView] = {}
         self._routers: List[Tuple[str, Router]] = []
 
     def get(
@@ -365,6 +366,101 @@ class Router:
 
         return None
 
+    def webhook(
+        self,
+        name: str,
+        *,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
+        operation_id: Optional[str] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> Callable[[TCallable], TCallable]:
+        def decorator(view_func: TCallable) -> TCallable:
+            self.add_api_webhook(
+                name,
+                ["POST"],
+                view_func,
+                auth=auth,
+                response=response,
+                operation_id=operation_id,
+                summary=summary,
+                description=description,
+                tags=tags,
+                deprecated=deprecated,
+                by_alias=by_alias,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+                include_in_schema=include_in_schema,
+                openapi_extra=openapi_extra,
+            )
+            return view_func
+
+        return decorator
+
+    def add_api_webhook(
+        self,
+        name: str,
+        methods: List[str],
+        view_func: Callable,
+        *,
+        auth: Any = NOT_SET,
+        response: Any = NOT_SET,
+        operation_id: Optional[str] = None,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        deprecated: Optional[bool] = None,
+        by_alias: Optional[bool] = None,
+        exclude_unset: Optional[bool] = None,
+        exclude_defaults: Optional[bool] = None,
+        exclude_none: Optional[bool] = None,
+        include_in_schema: bool = True,
+        openapi_extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        if name not in self.webhooks:
+            path_view = PathView()
+            self.webhooks[name] = path_view
+        else:
+            path_view = self.webhooks[name]
+
+        by_alias = by_alias is None and self.by_alias or by_alias
+        exclude_unset = exclude_unset is None and self.exclude_unset or exclude_unset
+        exclude_defaults = (
+            exclude_defaults is None and self.exclude_defaults or exclude_defaults
+        )
+        exclude_none = exclude_none is None and self.exclude_none or exclude_none
+
+        path_view.add_operation(
+            path=name,
+            methods=methods,
+            view_func=view_func,
+            auth=auth,
+            response=response,
+            operation_id=operation_id,
+            summary=summary,
+            description=description,
+            tags=tags,
+            deprecated=deprecated,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            include_in_schema=include_in_schema,
+            openapi_extra=openapi_extra,
+        )
+        if self.api:
+            path_view.set_api_instance(self.api, self)
+
     def set_api_instance(
         self, api: "NinjaAPI", parent_router: Optional["Router"] = None
     ) -> None:
@@ -372,6 +468,8 @@ class Router:
             self.auth = parent_router.auth
         self.api = api
         for path_view in self.path_operations.values():
+            path_view.set_api_instance(self.api, self)
+        for path_view in self.webhooks.values():
             path_view.set_api_instance(self.api, self)
         for _, router in self._routers:
             router.set_api_instance(api, self)
