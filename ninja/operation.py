@@ -240,19 +240,34 @@ class Operation:
         """
         The protocol for results
          - if HttpResponse - returns as is
-         - if tuple with 2 elements - means http_code + body
+         - if tuple with 2 elements:
+            - if the first element in the tuple is an int: it means http_code + body
+            - otherwise, it means body + additional context
+         - if tuple with 3 elements, it means http_code + body + additional context
          - otherwise it's a body
         """
         if isinstance(result, HttpResponseBase):
             return result
 
         status: int = 200
+        additional_context: Dict[str, Any] = {}
         if len(self.response_models) == 1:
             status = next(iter(self.response_models))
 
-        if isinstance(result, tuple) and len(result) == 2:
-            status = result[0]
-            result = result[1]
+        if isinstance(result, tuple):
+            if len(result) == 2:
+                part1, part2 = result
+
+                if isinstance(part1, int):
+                    status = part1
+                    result = part2
+
+                else:
+                    result = part1
+                    additional_context = part2
+
+            elif len(result) == 3:
+                status, result, additional_context = result
 
         if status in self.response_models:
             response_model = self.response_models[status]
@@ -278,14 +293,23 @@ class Operation:
         resp_object = ResponseObject(result)
         # ^ we need object because getter_dict seems work only with model_validate
         validated_object = response_model.model_validate(
-            resp_object, context={"request": request, "response_status": status}
+            resp_object,
+            context={
+                "request": request,
+                "response_status": status,
+                **additional_context,
+            },
         )
 
         model_dump_kwargs: Dict[str, Any] = {}
         if pydantic_version >= [2, 7]:
             # pydantic added support for serialization context at 2.7
             model_dump_kwargs.update(
-                context={"request": request, "response_status": status}
+                context={
+                    "request": request,
+                    "response_status": status,
+                    **additional_context,
+                }
             )
 
         result = validated_object.model_dump(
