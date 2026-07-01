@@ -63,7 +63,7 @@ jobs:
             python-version: '3.14'
           # Note: Pydantic 2.12 + Python 3.14 only works with Django 5.2+
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -99,7 +99,7 @@ jobs:
       pull-requests: write
     
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -111,7 +111,7 @@ jobs:
       - name: Remove checked out repo
         run: |
           rm -rf *
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         name: Checkout head branch
         with:
           ref: ${{ github.event.pull_request.head.ref }}
@@ -147,7 +147,7 @@ jobs:
   codestyle:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
